@@ -3,9 +3,9 @@
  */
 
 import { h } from './muttml'
-import CounterComponent from './CounterComponent'
-import TodoComponent from './TodoComponent'
-import WrapperComponent from './WrapperComponent'
+import CounterComponent from './components/Counter'
+import TodoComponent from './components/Todo'
+import WrapperComponent from './components/Wrapper'
 
 // Initialize the app
 document.addEventListener('DOMContentLoaded', (): void => {
@@ -47,7 +47,20 @@ document.addEventListener('DOMContentLoaded', (): void => {
 	const components = (
 		<div>
 			<WrapperComponent>
-				<CounterComponent />
+				<CounterComponent 
+					on:countChanged={(newCount: number, oldCount: number) => {
+						console.log(`Counter changed from ${oldCount} to ${newCount}`)
+					}}
+					on:countIncremented={(newCount: number) => {
+						console.log(`Counter incremented to ${newCount}`)
+					}}
+					on:countDecremented={(newCount: number) => {
+						console.log(`Counter decremented to ${newCount}`)
+					}}
+					on:countReset={() => {
+						console.log('Counter was reset')
+					}}
+				/>
 			</WrapperComponent>
 			<WrapperComponent>
 				<TodoComponent />

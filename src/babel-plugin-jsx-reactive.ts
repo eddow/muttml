@@ -12,12 +12,10 @@ interface BabelPluginState {
 export function babelPluginJsxReactive({
 	types: t,
 }: BabelPluginOptions): PluginObj<BabelPluginState> {
-	console.log('🚀 Babel plugin loaded!')
 	return {
 		name: 'jsx-reactive',
 		visitor: {
 			JSXElement(path: NodePath<JSXElement>) {
-				console.log('JSXElement', path.node)
 				// Traverse all JSX children and attributes
 				for (let index = 0; index < path.node.children.length; index++) {
 					const child = path.node.children[index]
@@ -37,13 +35,39 @@ export function babelPluginJsxReactive({
 
 				// Also check props (e.g., `<Component prop={this.counter} />`)
 				if (t.isJSXOpeningElement(path.node.openingElement)) {
+					// Check if this is a component (PascalCase) or DOM element (lowercase)
+					const isComponent =
+						t.isJSXIdentifier(path.node.openingElement.name) &&
+						typeof path.node.openingElement.name.name === 'string' &&
+						/^[A-Z]/.test(path.node.openingElement.name.name)
+
 					for (const attr of path.node.openingElement.attributes) {
-						if (t.isJSXAttribute(attr) && t.isJSXExpressionContainer(attr.value)) {
-							const expression = attr.value.expression
-							if (!t.isJSXEmptyExpression(expression)) {
-								// Rewrite `prop={this.counter}` into `prop={() => this.counter}`
-								const arrowFunction = t.arrowFunctionExpression([], expression)
-								attr.value = t.jsxExpressionContainer(arrowFunction)
+						if (t.isJSXAttribute(attr)) {
+							// Transform on:click to onClick, on:input to onInput, etc.
+							if (
+								attr.name.name &&
+								typeof attr.name.name === 'string' &&
+								attr.name.name.startsWith('on:')
+							) {
+								if (isComponent) {
+									// For components, keep the on: prefix for component events
+									// No transformation needed - the h() function will handle it
+								} else {
+									// For DOM elements, convert to camelCase (e.g., 'click' -> 'onClick')
+									const eventName = attr.name.name.slice(3) // Remove the 'on:'
+									const onEventName = `on${eventName.charAt(0).toUpperCase()}${eventName.slice(1)}`
+									attr.name.name = onEventName
+								}
+							}
+
+							// Handle reactive expressions in attributes
+							if (t.isJSXExpressionContainer(attr.value)) {
+								const expression = attr.value.expression
+								if (!t.isJSXEmptyExpression(expression)) {
+									// Rewrite `prop={this.counter}` into `prop={() => this.counter}`
+									const arrowFunction = t.arrowFunctionExpression([], expression)
+									attr.value = t.jsxExpressionContainer(arrowFunction)
+								}
 							}
 						}
 					}

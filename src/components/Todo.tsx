@@ -2,7 +2,8 @@
  * Todo Web Component using inline JSX templating
  */
 
-import { h, MuttComponent } from './muttml'
+import { h, MuttComponent } from '../muttml'
+import TodoCSS from './Todo.scss?inline'
 
 interface Todo {
 	id: number
@@ -20,135 +21,7 @@ class TodoWebComponent extends MuttComponent {
     super(props, children, host)
   }
 
-	public static style = `
-			h2 {
-				color: #333;
-				margin-top: 0;
-			}
-			
-			.input-section {
-				display: flex;
-				gap: 10px;
-				margin-bottom: 20px;
-			}
-			
-			.todo-input {
-				flex: 1;
-				padding: 10px;
-				border: 1px solid #ddd;
-				border-radius: 4px;
-				font-size: 16px;
-			}
-			
-			.add-button {
-				padding: 10px 20px;
-				background: #4caf50;
-				color: white;
-				border: none;
-				border-radius: 4px;
-				cursor: pointer;
-				font-size: 16px;
-				transition: all 0.2s ease;
-			}
-			
-			.add-button:hover {
-				transform: translateY(-1px);
-				box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-			}
-			
-			.filters {
-				display: flex;
-				gap: 10px;
-				margin-bottom: 20px;
-			}
-			
-			.filter-button {
-				padding: 8px 16px;
-				border: 1px solid #ddd;
-				border-radius: 4px;
-				cursor: pointer;
-				background: white;
-				color: #333;
-				transition: all 0.2s ease;
-			}
-			
-			.filter-button.active {
-				background: #667eea;
-				color: white;
-			}
-			
-			.filter-button:hover {
-				background: #f0f0f0;
-			}
-			
-			.filter-button.active:hover {
-				background: #5a6fd8;
-			}
-			
-			.todo-list {
-				min-height: 100px;
-			}
-			
-			.todo-item {
-				display: flex;
-				align-items: center;
-				gap: 10px;
-				padding: 10px;
-				border-bottom: 1px solid #eee;
-			}
-			
-			.todo-text {
-				flex: 1;
-			}
-			
-			.todo-text.completed {
-				text-decoration: line-through;
-				color: #888;
-			}
-			
-			.delete-button {
-				padding: 5px 10px;
-				background: #ff6b6b;
-				color: white;
-				border: none;
-				border-radius: 4px;
-				cursor: pointer;
-				font-size: 12px;
-				transition: all 0.2s ease;
-			}
-			
-			.delete-button:hover {
-				transform: translateY(-1px);
-				box-shadow: 0 2px 5px;
-			}
-			
-			.clear-section {
-				margin-top: 20px;
-				text-align: right;
-			}
-			
-			.clear-button {
-				padding: 8px 16px;
-				background: #ffa726;
-				color: white;
-				border: none;
-				border-radius: 4px;
-				cursor: pointer;
-				transition: all 0.2s ease;
-			}
-			
-			.clear-button:hover {
-				transform: translateY(-1px);
-				box-shadow: 0 2px 5px rgba(0,0,0,0.2);
-			}
-			
-			.empty-message {
-				color: #666;
-				font-style: italic;
-				text-align: center;
-				padding: 20px;
-			}
-	`
+	static readonly style = TodoCSS
 
 	public get style() {
 		return `
@@ -174,36 +47,36 @@ class TodoWebComponent extends MuttComponent {
 					<h2>Todo Component (JSX)</h2>
 					
 					{/* Input section */}
-					<div className="input-section">
+					<div class="input-section">
 						<input
 							type="text"
-							className="todo-input"
+							class="todo-input"
 							placeholder="Add a new todo..."
 							value={this.newTodoText}
 							onInput={(e: Event) => this.updateNewTodoText(e)}
 							onKeypress={(e: KeyboardEvent) => e.key === 'Enter' && this.addTodo()}
 						/>
-						<button className="add-button" onClick={() => this.addTodo()}>
+						<button class="add-button" onClick={() => this.addTodo()}>
 							Add
 						</button>
 					</div>
 					
 					{/* Filter buttons */}
-					<div className="filters">
+					<div class="filters">
 						<button
-							className={`filter-button ${this.filter === 'all' ? 'active' : ''}`}
+							class={['filter-button', { active: this.filter === 'all' }]}
 							onClick={() => this.setFilter('all')}
 						>
 							All
 						</button>
 						<button
-							className={`filter-button ${this.filter === 'active' ? 'active' : ''}`}
+							class={['filter-button', { active: this.filter === 'active' }]}
 							onClick={() => this.setFilter('active')}
 						>
 							Active ({activeCount})
 						</button>
 						<button
-							className={`filter-button ${this.filter === 'completed' ? 'active' : ''}`}
+							class={['filter-button', { active: this.filter === 'completed' }]}
 							onClick={() => this.setFilter('completed')}
 						>
 							Completed ({completedCount})
@@ -211,9 +84,9 @@ class TodoWebComponent extends MuttComponent {
 					</div>
 					
 					{/* Todo list */}
-					<div className="todo-list">
+					<div class="todo-list">
 						{filteredTodos.length === 0 ? (
-							<div className="empty-message">
+							<div class="empty-message">
 								{this.todos.length === 0 
 									? 'No todos yet. Add one above!' 
 									: `No ${this.filter} todos.`
@@ -221,17 +94,17 @@ class TodoWebComponent extends MuttComponent {
 							</div>
 						) : (
 							filteredTodos.map(todo => (
-								<div key={todo.id.toString()} className="todo-item">
+								<div key={todo.id.toString()} class="todo-item">
 									<input
 										type="checkbox"
 										checked={todo.completed}
 										onChange={() => this.toggleTodo(todo.id)}
 									/>
-									<span className={`todo-text ${todo.completed ? 'completed' : ''}`}>
+									<span class={['todo-text', { completed: todo.completed }]}>
 										{todo.text}
 									</span>
 									<button
-										className="delete-button"
+										class="delete-button"
 										onClick={() => this.deleteTodo(todo.id)}
 									>
 										Delete
@@ -243,9 +116,9 @@ class TodoWebComponent extends MuttComponent {
 					
 					{/* Clear completed section */}
 					{completedCount > 0 && (
-						<div className="clear-section">
+						<div class="clear-section">
 							<button
-								className="clear-button"
+								class="clear-button"
 								onClick={() => this.clearCompleted()}
 							>
 								Clear {completedCount} completed

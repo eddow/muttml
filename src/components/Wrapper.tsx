@@ -2,34 +2,22 @@
  * Wrapper Component to demonstrate children usage
  */
 
-import { h, MuttComponent } from './muttml'
+import { h, MuttComponent } from '../muttml'
+import WrapperCSS from './Wrapper.scss?inline'
 
 class WrapperComponent extends MuttComponent {
 	constructor(props: Record<string, any> = {}, children: any[] = [], host: HTMLElement) {
 		super(props, children, host)
 	}
 
-	static style = `
-		.wrapper {
-			border: 2px solid #42b883;
-			border-radius: 8px;
-			padding: 20px;
-			margin: 10px 0;
-			background: #f8f9fa;
-		}
-		
-		.wrapper h3 {
-			margin-top: 0;
-			color: #42b883;
-		}
-	`
+	static readonly style = WrapperCSS
 
 	get template() {
 		return (
-			<div className="wrapper">
+			<div class="wrapper">
 				<h3>Wrapper Component</h3>
 				<p>This wrapper contains children:</p>
-				<div className="children">
+				<div class="children">
 					{this.children}
 				</div>
 			</div>

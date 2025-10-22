@@ -1,4 +1,5 @@
-import { effect, ReactiveBase, unwrap } from 'mutts/src'
+import { Eventful, EventsBase, effect, reactive, unwrap } from 'mutts/src'
+import { classNames } from './classNames'
 
 /**
  * WeakMap to store cleanup functions associated with HTMLElements
@@ -148,6 +149,18 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: any[])
 		// Pass props, children, and host to component constructor
 		const instance = new ComponentCtor(props, children, host)
 
+		// Handle component events from props
+		for (const [key, value] of Object.entries(props || {})) {
+			if (key.startsWith('on:') && typeof value === 'function') {
+				const eventName = key.slice(3) // Remove 'on:' prefix
+				// Register the event listener on the component
+				const eventCleanup = effect(() => {
+					return instance.on(eventName as any, value())
+				})
+				storeCleanupForElement(host, eventCleanup)
+			}
+		}
+
 		// Create two containers in shadow DOM
 		const styleContainer = document.createElement('div')
 		const contentContainer = document.createElement('div')
@@ -202,23 +215,32 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: any[])
 	for (const [key, value] of Object.entries(props || {})) {
 		if (key === 'children') continue // Skip children, we'll handle them separately
 
-		if (key.startsWith('on') && typeof value === 'function') {
+		if (key.startsWith('on:') && typeof value === 'function') {
 			// Event handler
-			const eventType = key.slice(2).toLowerCase()
+			const eventType = key.slice(3).toLowerCase()
 			const eventCleanup = effect(() => {
 				const registeredEvent = value()
 				element.addEventListener(eventType, registeredEvent)
 				return () => element.removeEventListener(eventType, registeredEvent)
 			})
 			storeCleanupForElement(element, eventCleanup)
+		} else if (key === 'class') {
+			if (typeof value === 'function') {
+				// Reactive class (e.g., `class={() => ['btn', { active: this.isActive }]}`)
+				const classCleanup = effect(() => {
+					element.className = classNames(value())
+				})
+				storeCleanupForElement(element, classCleanup)
+			} else {
+				// Static class
+				element.className = classNames(value)
+			}
 		} else if (typeof value === 'function') {
 			// Reactive prop (e.g., `prop={() => this.counter}`)
 			const propCleanup = effect(() => {
 				element[key] = value()
 			})
 			storeCleanupForElement(element, propCleanup)
-		} else if (key === 'className') {
-			element.className = String(value)
 		} else if (key === 'style' && typeof value === 'object') {
 			// Style object
 			Object.assign(element.style, value)
@@ -237,7 +259,7 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: any[])
 			const processedChildren = children.flatMap((child) => {
 				if (typeof child === 'function') {
 					// Reactive child (e.g., `{() => this.counter}`)
-					return child()
+					return unwrap(child())
 				}
 				return child
 			})
@@ -280,7 +302,7 @@ declare global {
 // Make h available globally
 ;(globalThis as any).h = h
 
-export abstract class MuttComponent extends ReactiveBase {
+export abstract class MuttComponent<Events extends EventsBase> extends Eventful<Events> {
 	protected props: Record<string, any>
 	protected children: any[]
 	protected host: HTMLElement
@@ -290,8 +312,22 @@ export abstract class MuttComponent extends ReactiveBase {
 		this.props = props
 		this.children = children
 		this.host = host
+		// biome-ignore lint/correctness/noConstructorReturn: This is the whole point here
+		return reactive(this)
 	}
-
+	public on(events: Partial<Events>): void
+	public on<EventType extends keyof Events>(event: EventType, cb: Events[EventType]): () => void
+	public on(...args: any[]): Events[keyof Events] {
+		return super.on.apply(unwrap(this), args as any) as Events[keyof Events]
+	}
+	public off(events: Partial<Events>): void
+	public off<EventType extends keyof Events>(event: EventType, cb: Events[EventType]): void
+	public off(...args: any[]): void {
+		super.off.apply(unwrap(this), args as any)
+	}
+	public emit<EventType extends keyof Events>(event: EventType, ...args: any[]): void {
+		super.emit.apply(unwrap(this), [event, ...args] as any)
+	}
 	static get style(): string | undefined {
 		return undefined
 	}

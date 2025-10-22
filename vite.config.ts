@@ -4,14 +4,19 @@ import { babelPluginJsxReactive } from './src/babel-plugin-jsx-reactive'
 
 export default defineConfig({
 	root: '.',
+	css: {
+		preprocessorOptions: {
+			scss: {
+				// SCSS options can be added here if needed
+			}
+		}
+	},
 	plugins: [
 		{
 			name: 'babel-jsx-transform',
 			enforce: 'pre',
 			async transform(code, id) {
 				if (!/\.(tsx?|jsx?)$/.test(id)) return null
-				
-				console.log('🚀 Babel transforming:', id)
 				
 				const result = transformSync(code, {
 					filename: id,
@@ -20,7 +25,7 @@ export default defineConfig({
 					plugins: [
 						babelPluginJsxReactive,
 						['@babel/plugin-proposal-decorators', { version: '2023-05' }],
-						['@babel/plugin-transform-react-jsx', { pragma: 'h', pragmaFrag: 'Fragment' }],
+						['@babel/plugin-transform-react-jsx', { pragma: 'h', pragmaFrag: 'Fragment', throwIfNamespace: false }],
 						['@babel/plugin-transform-typescript', { isTSX: true, allowDeclareFields: true }],
 					],
 					sourceMaps: true,
