@@ -1,6 +1,58 @@
 import { effect, ReactiveBase, unwrap } from 'mutts/src'
 
 /**
+ * WeakMap to store cleanup functions associated with HTMLElements
+ */
+const elementCleanupMap = new WeakMap<HTMLElement, Set<() => void>>()
+
+/**
+ * FinalizationRegistry to detect when elements are garbage collected
+ */
+const cleanupRegistry = new FinalizationRegistry((heldValue: Set<() => void>) => {
+	const cleanups = heldValue
+
+	if (cleanups && cleanups.size > 0) {
+		// Debug logging (can be removed in production)
+		if (typeof window !== 'undefined' && (window as any).DEBUG_CLEANUP) {
+			console.log(`[Cleanup] Element garbage collected, cleaning up ${cleanups.size} functions`)
+		}
+
+		// Call all cleanup functions
+		for (const cleanup of cleanups) {
+			try {
+				cleanup()
+				if (typeof window !== 'undefined' && (window as any).DEBUG_CLEANUP) {
+					console.log(`[Cleanup] ✓ Cleanup function executed successfully`)
+				}
+			} catch (error) {
+				console.warn('Error during element cleanup:', error)
+			}
+		}
+	}
+})
+
+/**
+ * Store a cleanup function for an element
+ */
+function storeCleanupForElement(element: HTMLElement, cleanup: () => void) {
+	let cleanups = elementCleanupMap.get(element)
+	if (!cleanups) {
+		cleanups = new Set()
+		elementCleanupMap.set(element, cleanups)
+
+		// Register the element with FinalizationRegistry for GC cleanup
+		// We register the element itself, and store the cleanup functions as the held value
+		cleanupRegistry.register(element, cleanups)
+	}
+	cleanups.add(cleanup)
+
+	// Debug logging (can be removed in production)
+	if (typeof window !== 'undefined' && (window as any).DEBUG_CLEANUP) {
+		console.log(`[Cleanup] Stored cleanup function for element:`, element.tagName, element)
+	}
+}
+
+/**
  * Global hook to catch HTMLElement.toString() calls on proxied elements
  * This helps debug when elements are rendered as strings instead of being unwrapped
  */
@@ -111,7 +163,7 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: any[])
 		}
 
 		// Effect for styles - only updates style container
-		effect(() => {
+		const styleCleanup = effect(() => {
 			const instStyle = instance.style as string | undefined
 
 			// Use adoptedStyleSheets for instance styles
@@ -121,9 +173,10 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: any[])
 				shadow.adoptedStyleSheets = [shadow.adoptedStyleSheets[0], styleSheet].filter(Boolean)
 			}
 		})
+		storeCleanupForElement(host, styleCleanup)
 
 		// Effect for content - only updates content container
-		effect(() => {
+		const contentCleanup = effect(() => {
 			const template = instance.template
 			const nodes: Node[] = []
 
@@ -138,6 +191,7 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: any[])
 			}
 			contentContainer.replaceChildren(...nodes)
 		})
+		storeCleanupForElement(host, contentCleanup)
 		return host
 	}
 
@@ -151,16 +205,18 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: any[])
 		if (key.startsWith('on') && typeof value === 'function') {
 			// Event handler
 			const eventType = key.slice(2).toLowerCase()
-			effect(() => {
+			const eventCleanup = effect(() => {
 				const registeredEvent = value()
 				element.addEventListener(eventType, registeredEvent)
 				return () => element.removeEventListener(eventType, registeredEvent)
 			})
+			storeCleanupForElement(element, eventCleanup)
 		} else if (typeof value === 'function') {
 			// Reactive prop (e.g., `prop={() => this.counter}`)
-			effect(() => {
+			const propCleanup = effect(() => {
 				element[key] = value()
 			})
+			storeCleanupForElement(element, propCleanup)
 		} else if (key === 'className') {
 			element.className = String(value)
 		} else if (key === 'style' && typeof value === 'object') {
@@ -174,7 +230,8 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: any[])
 		}
 	}
 
-	effect(() => {
+	//TODO: better management of children
+	const childrenCleanup = effect(() => {
 		// Render children
 		if (children && !props?.innerHTML) {
 			const processedChildren = children.flatMap((child) => {
@@ -187,6 +244,7 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: any[])
 			element.replaceChildren(...processedChildren)
 		}
 	})
+	storeCleanupForElement(element, childrenCleanup)
 
 	return element
 }
