@@ -5,7 +5,7 @@
 import { h, MuttComponent } from '../muttml'
 import WrapperCSS from './Wrapper.scss?inline'
 
-class WrapperComponent extends MuttComponent {
+class WrapperComponent extends MuttComponent<{}> {
 	constructor(props: Record<string, any> = {}, children: any[] = [], host: HTMLElement) {
 		super(props, children, host)
 	}

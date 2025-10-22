@@ -16,8 +16,9 @@ interface CounterEvents extends Record<string, (...args: any[]) => void> {
 export default class CounterWebComponent extends MuttComponent<CounterEvents> {
 	private count: number = 0
 
-	constructor(props: Record<string, any> = {}, children: any[] = [], host: HTMLElement) {
+	constructor(props: {count?: number} = {}, children: any[] = [], host: HTMLElement) {
 		super(props, children, host)
+		this.count = props.count ?? 0
 	}
 
 	static readonly style = CounterCSS
@@ -28,11 +29,10 @@ export default class CounterWebComponent extends MuttComponent<CounterEvents> {
 		const normalizedCount = Math.max(0, Math.min(100, this.count))
 		const red = Math.round(255 * (1 - normalizedCount / 100))
 		const green = Math.round(255 * (normalizedCount / 100))
-		const blue = 0
 		
 		return `
 			.counter-text {
-				color: rgb(${red}, ${green}, ${blue});
+				color: rgb(${red}, ${green}, 0);
 				transition: color 0.3s ease;
 			}
 		`
@@ -61,6 +61,20 @@ export default class CounterWebComponent extends MuttComponent<CounterEvents> {
 							max="100"
 							value={this.count}
 							on:input={(e: Event) => this.handleSliderChange(e)}
+						/>
+					</div>
+					<div class="input-container">
+						<label class="input-label" htmlFor="count-input">
+							Direct Input:
+						</label>
+						<input
+							type="number"
+							id="count-input"
+							class="count-input"
+							min="0"
+							max="100"
+							value={this.count}
+							on:input={(e: Event) => this.handleInputChange(e)}
 						/>
 					</div>
 					<div class="controls">
@@ -105,5 +119,20 @@ export default class CounterWebComponent extends MuttComponent<CounterEvents> {
 		const oldCount = this.count
 		this.count = parseInt(target.value, 10)
 		this.emit('countChanged', this.count, oldCount)
+	}
+
+	private handleInputChange(e: Event): void {
+		const target = e.target as HTMLInputElement
+		const oldCount = this.count
+		const newValue = parseInt(target.value, 10)
+		
+		// Validate the input value
+		if (!isNaN(newValue) && newValue >= 0 && newValue <= 100) {
+			this.count = newValue
+			this.emit('countChanged', this.count, oldCount)
+		} else {
+			// Reset to old value if invalid
+			target.value = this.count.toString()
+		}
 	}
 }

@@ -12,7 +12,7 @@ interface Todo {
 	createdAt: Date
 }
 
-class TodoWebComponent extends MuttComponent {
+class TodoWebComponent extends MuttComponent<{}> {
 	private todos: Todo[] = []
 	private filter: 'all' | 'active' | 'completed' = 'all'
 	private newTodoText: string = ''

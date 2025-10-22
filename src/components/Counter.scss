@@ -124,6 +124,37 @@ button {
 	color: #333;
 }
 
+.input-container {
+	margin: $spacing-lg 0;
+}
+
+.input-label {
+	display: block;
+	margin-bottom: $spacing-sm;
+	font-weight: bold;
+	color: #333;
+}
+
+.count-input {
+	width: 100px;
+	padding: $spacing-sm;
+	border: 2px solid $primary-color;
+	border-radius: $border-radius-sm;
+	font-size: $font-size-base;
+	text-align: center;
+	transition: $transition;
+	
+	&:focus {
+		outline: none;
+		border-color: $secondary-color;
+		box-shadow: 0 0 0 2px rgba(118, 75, 162, 0.2);
+	}
+	
+	&:invalid {
+		border-color: $danger-color;
+	}
+}
+
 // Dynamic styles for counter text color
 .counter-text {
 	transition: color 0.3s ease;

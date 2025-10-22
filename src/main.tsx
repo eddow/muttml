@@ -47,7 +47,8 @@ document.addEventListener('DOMContentLoaded', (): void => {
 	const components = (
 		<div>
 			<WrapperComponent>
-				<CounterComponent 
+				<CounterComponent
+					count={10}
 					on:countChanged={(newCount: number, oldCount: number) => {
 						console.log(`Counter changed from ${oldCount} to ${newCount}`)
 					}}

@@ -5,4 +5,6 @@
 - children - manage arrays
 - context
 - 2-way
-- jsx pluging: `@click` ?
+- validate props - TS
+- No mounted, unmounted, updated lifecycle methods
+- use: mixins
