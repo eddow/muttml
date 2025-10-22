@@ -2,40 +2,13 @@ import { computed, effect, reactive, unwrap } from 'mutts/src'
 import { classNames } from './classNames'
 import { storeCleanupForElement } from './cleanup'
 import { NeutralHost } from './host'
+import { Child, processChildren } from './processChildren'
 import { getComponent } from './registry'
-
-/**
- * Process children in template - replace {children} with actual children
- */
-function processChildren(template: any, children: any[]): any {
-	if (typeof template === 'string') {
-		return template
-	}
-
-	if (template instanceof Node) {
-		return template
-	}
-
-	if (template && typeof template === 'object') {
-		// If it's a VNode-like object, process its children
-		if (template.children) {
-			const processedChildren = template.children.map((child: any) => {
-				if (child === '{children}') {
-					return children
-				}
-				return processChildren(child, children)
-			})
-			return { ...template, children: processedChildren.flat() }
-		}
-	}
-
-	return template
-}
 
 /**
  * Custom h() function for JSX rendering - returns DOM elements directly
  */
-export const h = (tag: any, props: Record<string, any> = {}, ...children: any[]): Node => {
+export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[]): Node => {
 	// Get component constructor - either direct class or from registry
 	let ComponentCtor: any = null
 
@@ -109,18 +82,8 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: any[])
 		// Effect for content - only updates content container
 		const contentCleanup = effect(() => {
 			const template = instance.template
-			const nodes: Node[] = []
-
 			// template is already a DOM element from h()
-			// If template contains {children}, replace it with actual children
-			if (template && typeof template === 'object' && 'children' in template) {
-				// Replace {children} with actual children
-				const processedTemplate = processChildren(template, children)
-				nodes.push(unwrap(processedTemplate))
-			} else {
-				nodes.push(unwrap(template))
-			}
-			shadow.replaceChildren(...nodes)
+			shadow.replaceChildren(unwrap(template))
 		})
 		storeCleanupForElement(host, contentCleanup)
 		return host
@@ -170,17 +133,11 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: any[])
 		}
 	}
 
-	//TODO: better management of children
+	// Enhanced children management with better array and .map() support
 	const childrenCleanup = effect(() => {
 		// Render children
 		if (children && !props?.innerHTML) {
-			const processedChildren = children.flatMap((child) => {
-				if (typeof child === 'function') {
-					// Reactive child (e.g., `{() => this.counter}`)
-					return unwrap(child())
-				}
-				return child
-			})
+			const processedChildren = processChildren(children)
 			element.replaceChildren(...processedChildren)
 		}
 	})
@@ -190,7 +147,7 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: any[])
 }
 
 // Optional: Add JSX support for fragments
-export const Fragment = (props: { children: any[] }) => props.children
+export const Fragment = (props: { children: Child[] }) => props.children
 
 // Make h available globally for JSX
 declare global {

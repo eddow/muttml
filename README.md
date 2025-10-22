@@ -2,9 +2,12 @@
 
 
 ## TODO
-- children - manage arrays
-- context
 - 2-way
 - validate props - TS
-- No mounted, unmounted, updated lifecycle methods
+- children - manage arrays
+- No mounted, unmounted, updated lifecycle methods:
+  - updated: useless
+  - (un)mounted: todo n the children management
+- context
+  - should be given on-mounted
 - use: mixins

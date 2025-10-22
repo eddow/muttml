@@ -53,10 +53,10 @@ class TodoWebComponent extends MuttComponent<{}> {
 							class="todo-input"
 							placeholder="Add a new todo..."
 							value={this.newTodoText}
-							onInput={(e: Event) => this.updateNewTodoText(e)}
-							onKeypress={(e: KeyboardEvent) => e.key === 'Enter' && this.addTodo()}
+							on:input={(e: Event) => this.updateNewTodoText(e)}
+							on:keypress={(e: KeyboardEvent) => e.key === 'Enter' && this.addTodo()}
 						/>
-						<button class="add-button" onClick={() => this.addTodo()}>
+						<button class="add-button" on:click={() => this.addTodo()}>
 							Add
 						</button>
 					</div>
@@ -65,19 +65,19 @@ class TodoWebComponent extends MuttComponent<{}> {
 					<div class="filters">
 						<button
 							class={['filter-button', { active: this.filter === 'all' }]}
-							onClick={() => this.setFilter('all')}
+							on:click={() => this.setFilter('all')}
 						>
 							All
 						</button>
 						<button
 							class={['filter-button', { active: this.filter === 'active' }]}
-							onClick={() => this.setFilter('active')}
+							on:click={() => this.setFilter('active')}
 						>
 							Active ({activeCount})
 						</button>
 						<button
 							class={['filter-button', { active: this.filter === 'completed' }]}
-							onClick={() => this.setFilter('completed')}
+							on:click={() => this.setFilter('completed')}
 						>
 							Completed ({completedCount})
 						</button>
@@ -98,14 +98,14 @@ class TodoWebComponent extends MuttComponent<{}> {
 									<input
 										type="checkbox"
 										checked={todo.completed}
-										onChange={() => this.toggleTodo(todo.id)}
+										on:change={() => this.toggleTodo(todo.id)}
 									/>
 									<span class={['todo-text', { completed: todo.completed }]}>
 										{todo.text}
 									</span>
 									<button
 										class="delete-button"
-										onClick={() => this.deleteTodo(todo.id)}
+										on:click={() => this.deleteTodo(todo.id)}
 									>
 										Delete
 									</button>
@@ -119,7 +119,7 @@ class TodoWebComponent extends MuttComponent<{}> {
 						<div class="clear-section">
 							<button
 								class="clear-button"
-								onClick={() => this.clearCompleted()}
+								on:click={() => this.clearCompleted()}
 							>
 								Clear {completedCount} completed
 							</button>
