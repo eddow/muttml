@@ -2,9 +2,10 @@
  * Main entry point for MuttML application
  */
 
-import { h } from './h.js'
-import CounterComponent from './CounterComponent.js'
-import TodoComponent from './TodoComponent.js'
+import { h } from './muttml'
+import CounterComponent from './CounterComponent'
+import TodoComponent from './TodoComponent'
+import WrapperComponent from './WrapperComponent'
 
 // Initialize the app
 document.addEventListener('DOMContentLoaded', (): void => {
@@ -42,11 +43,15 @@ document.addEventListener('DOMContentLoaded', (): void => {
 
 	app.appendChild(introElement)
 	
-	// Add components using PascalCase JSX
+	// Add components using PascalCase JSX with children
 	const components = (
 		<div>
-			<CounterComponent />
-			<TodoComponent />
+			<WrapperComponent>
+				<CounterComponent />
+			</WrapperComponent>
+			<WrapperComponent>
+				<TodoComponent />
+			</WrapperComponent>
 		</div>
 	)
 	app.appendChild(components)

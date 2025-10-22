@@ -2,8 +2,7 @@
  * Todo Web Component using inline JSX templating
  */
 
-import { h } from './h.js'
-import MuttComponent from './MuttComponent.js'
+import { h, MuttComponent } from './muttml'
 
 interface Todo {
 	id: number
@@ -17,25 +16,11 @@ class TodoWebComponent extends MuttComponent {
 	private filter: 'all' | 'active' | 'completed' = 'all'
 	private newTodoText: string = ''
 
-	constructor() {
-		super()
-	}
+  constructor(props: Record<string, any> = {}, children: any[] = [], host: HTMLElement) {
+    super(props, children, host)
+  }
 
 	public static style = `
-		:host { display: block; }
-	`
-
-	public get style() {
-		return `
-			:host {
-				display: block;
-				padding: 20px;
-				border: 2px solid #764ba2;
-				border-radius: 8px;
-				margin: 20px 0;
-				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-			}
-			
 			h2 {
 				color: #333;
 				margin-top: 0;
@@ -162,6 +147,18 @@ class TodoWebComponent extends MuttComponent {
 				font-style: italic;
 				text-align: center;
 				padding: 20px;
+			}
+	`
+
+	public get style() {
+		return `
+			:host {
+				display: block;
+				padding: 20px;
+				border: 2px solid #764ba2;
+				border-radius: 8px;
+				margin: 20px 0;
+				font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 			}
 		`
 	}
