@@ -1,3 +1,5 @@
+@use "sass:color";
+
 // Theme Variables (inlined to avoid @import issues with adoptedStyleSheets)
 $primary-color: #667eea;
 $secondary-color: #764ba2;
@@ -93,7 +95,7 @@ h2 {
 	}
 	
 	&.active:hover {
-		background: darken($primary-color, 10%);
+		background: color.adjust($primary-color, $lightness: -10%);
 	}
 }
 

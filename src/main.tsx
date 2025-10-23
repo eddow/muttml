@@ -1,8 +1,8 @@
 /**
- * Main entry point for MuttML application
+ * Main entry point for Pounce-TS application
  */
 
-import { h } from './muttml'
+import { h } from '.'
 import CounterComponent from './components/Counter'
 import TodoComponent from './components/Todo'
 import WrapperComponent from './components/Wrapper'

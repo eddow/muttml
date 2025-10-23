@@ -2,7 +2,7 @@
  * Wrapper Component to demonstrate children usage
  */
 
-import { h, MuttComponent } from '../muttml'
+import { h, MuttComponent } from '..'
 import WrapperCSS from './Wrapper.scss?inline'
 
 class WrapperComponent extends MuttComponent<{}> {

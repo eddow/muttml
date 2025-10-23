@@ -45,6 +45,9 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 
 		// Pass props, children, and host to component constructor
 		const instance = new ComponentCtor(computedProps, children, host)
+		function describeTemplate() {
+			return instance.template
+		}
 
 		// Handle component events from props
 		for (const [key, value] of Object.entries(props || {})) {
@@ -81,7 +84,7 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 
 		// Effect for content - only updates content container
 		const contentCleanup = effect(() => {
-			const template = instance.template
+			const template = computed(describeTemplate)
 			// template is already a DOM element from h()
 			shadow.replaceChildren(unwrap(template))
 		})
@@ -137,8 +140,27 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 	const childrenCleanup = effect(() => {
 		// Render children
 		if (children && !props?.innerHTML) {
+			// Clean up old DOM children's effects
+			/*const oldChildren = Array.from(element.children)
+			oldChildren.forEach((child) => {
+				if (child instanceof HTMLElement) {
+					cleanupElementAndChildren(child)
+				}
+			})*/
+
+			// Process new children
 			const processedChildren = processChildren(children)
-			element.replaceChildren(...processedChildren)
+
+			const replaceChildrenCleanup = effect(() => {
+				// Replace children
+				element.replaceChildren(...unwrap(processedChildren.map(unwrap)))
+			})
+
+			// Return cleanup function
+			return () => {
+				processedChildren.stop?.()
+				replaceChildrenCleanup()
+			}
 		}
 	})
 	storeCleanupForElement(element, childrenCleanup)

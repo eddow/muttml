@@ -1,20 +1,29 @@
-import { effect, unwrap } from 'mutts/src'
+import { computed, effect, reactive, unwrap } from 'mutts/src'
 
 /**
  * A child can be:
  * - A DOM node
- * - A reactive function that returns a child
+ * - A reactive function that returns intermediate values
  * - An array of children (from .map() operations)
- * - A primitive value (string, number)
  */
-export type Child = Node | (() => Child) | Child[] | string | number
+export type Child = Node | (() => Intermediates) | Child[]
+
+/**
+ * Node descriptor - what a function can return
+ */
+export type NodeDesc = Node | string | number
+
+/**
+ * Intermediate values - what functions return before final processing
+ */
+export type Intermediates = NodeDesc | NodeDesc[]
 
 /**
  * Convert a value to a DOM Node
  * - If already a Node, return as-is
  * - If primitive (string/number), create text node
  */
-function toNode(value: Node | string | number): Node {
+function toNode(value: NodeDesc): Node {
 	if (value instanceof Node) {
 		return unwrap(value)
 	}
@@ -30,53 +39,30 @@ function toNode(value: Node | string | number): Node {
  *
  * Returns a flat array of DOM nodes suitable for replaceChildren()
  */
-export function processChildren(children: Child[]): Node[] {
+export function processChildren(children: Child[]): Node[] & { stop?: () => void } {
 	if (!children || children.length === 0) {
 		return []
 	}
-
-	// First loop: Process each child and collect results (Node | Node[])
-	const tempResults: (Node | Node[])[] = new Array(children.length)
-
-	effect(() => {
-		for (let i = 0; i < children.length; i++) {
-			const child = children[i]
-			effect(() => {
-				// Handle reactive functions
-				if (typeof child === 'function') {
-					const unwrappedResult = child()
-					// If the result is an array (from .map()), process it recursively
-					if (Array.isArray(unwrappedResult)) {
-						tempResults[i] = processChildren(unwrappedResult)
-					} else {
-						// Convert single result to Node
-						tempResults[i] = toNode(unwrappedResult as Node | string | number)
-					}
-				}
-				// Handle arrays (including results from .map())
-				else if (Array.isArray(child)) {
-					tempResults[i] = processChildren(child)
-				}
-				// Handle direct nodes and primitives
-				else {
-					tempResults[i] = toNode(child)
-				}
-			})
-		}
-		return () => {
-			tempResults.length = 0
-		}
+	const perChild = computed.map(children, (child) => {
+		if (Array.isArray(child)) return processChildren(child)
+		const partial = typeof child === 'function' ? child() : child
+		return Array.isArray(partial) ? partial.map(toNode) : toNode(partial)
 	})
 
 	// Second loop: Flatten the temporary results into final Node[]
-	const result: Node[] = []
-	for (const item of tempResults) {
-		if (Array.isArray(item)) {
-			result.push(...item)
-		} else {
-			result.push(item)
+	const result: Node[] = reactive([])
+	const stop = effect(() => {
+		result.length = 0
+		for (const item of perChild) {
+			if (Array.isArray(item)) {
+				result.push(...item)
+			} else {
+				result.push(item)
+			}
 		}
-	}
-
+	})
+	Object.defineProperty(result, 'stop', {
+		get: () => stop,
+	})
 	return result
 }

@@ -2,7 +2,8 @@
  * Todo Web Component using inline JSX templating
  */
 
-import { h, MuttComponent } from '../muttml'
+import { computed } from 'mutts/src'
+import { h, MuttComponent } from '..'
 import TodoCSS from './Todo.scss?inline'
 
 interface Todo {
@@ -17,9 +18,9 @@ class TodoWebComponent extends MuttComponent<{}> {
 	private filter: 'all' | 'active' | 'completed' = 'all'
 	private newTodoText: string = ''
 
-  constructor(props: Record<string, any> = {}, children: any[] = [], host: HTMLElement) {
-    super(props, children, host)
-  }
+	constructor(props: Record<string, any> = {}, children: any[] = [], host: HTMLElement) {
+		super(props, children, host)
+	}
 
 	static readonly style = TodoCSS
 
@@ -93,7 +94,7 @@ class TodoWebComponent extends MuttComponent<{}> {
 								}
 							</div>
 						) : (
-							filteredTodos.map(todo => (
+							computed.map(filteredTodos, todo => (
 								<div key={todo.id.toString()} class="todo-item">
 									<input
 										type="checkbox"

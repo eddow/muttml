@@ -2,7 +2,7 @@
  * Counter Web Component using inline JSX templating
  */
 
-import { h, MuttComponent } from '../muttml'
+import { h, MuttComponent } from '..'
 import CounterCSS from './Counter.scss?inline'
 
 // Define the events this component can emit
