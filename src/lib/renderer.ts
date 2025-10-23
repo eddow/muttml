@@ -1,14 +1,15 @@
-import { computed, effect, reactive, unwrap } from 'mutts/src'
+import { computed, reactive, unwrap } from 'mutts/src'
 import { classNames } from './classNames'
 import { storeCleanupForElement } from './cleanup'
+import { namedEffect } from './debug'
 import { NeutralHost } from './host'
 import { Child, processChildren } from './processChildren'
 import { getComponent } from './registry'
 
 /**
- * Custom h() function for JSX rendering - returns DOM elements directly
+ * Custom h() function for JSX rendering - returns a mount function
  */
-export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[]): Node => {
+export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[]): JSX.Element => {
 	// Get component constructor - either direct class or from registry
 	let ComponentCtor: any = null
 
@@ -20,7 +21,7 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 		ComponentCtor = getComponent(tag)!
 	}
 
-	// If we have a component, render it
+	// If we have a component, return mount function
 	if (ComponentCtor) {
 		const host = new NeutralHost()
 		const shadow = host.shadowRoot!
@@ -45,16 +46,13 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 
 		// Pass props, children, and host to component constructor
 		const instance = new ComponentCtor(computedProps, children, host)
-		function describeTemplate() {
-			return instance.template
-		}
 
 		// Handle component events from props
 		for (const [key, value] of Object.entries(props || {})) {
 			if (key.startsWith('on:') && typeof value === 'function') {
 				const eventName = key.slice(3) // Remove 'on:' prefix
 				// Register the event listener on the component
-				const eventCleanup = effect(() => {
+				const eventCleanup = namedEffect('eventRegister', () => {
 					return instance.on(eventName as any, value())
 				})
 				storeCleanupForElement(host, eventCleanup)
@@ -70,7 +68,7 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 		}
 
 		// Effect for styles - only updates style container
-		const styleCleanup = effect(() => {
+		const styleCleanup = namedEffect('style', () => {
 			const instStyle = instance.style as string | undefined
 
 			// Use adoptedStyleSheets for instance styles
@@ -81,18 +79,40 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 			}
 		})
 		storeCleanupForElement(host, styleCleanup)
+		return {
+			mount(context: Record<PropertyKey, any> = {}) {
+				// Set context on the component instance
+				instance.context = Object.create(context)
 
-		// Effect for content - only updates content container
-		const contentCleanup = effect(() => {
-			const template = computed(describeTemplate)
-			// template is already a DOM element from h()
-			shadow.replaceChildren(unwrap(template))
-		})
-		storeCleanupForElement(host, contentCleanup)
-		return host
+				function describeTemplate() {
+					return instance.template.mount(context)
+				}
+
+				// Call mount lifecycle hook
+				if (typeof instance.mount === 'function') {
+					instance.mount()
+				}
+				//*
+				// Effect for content - only updates content container
+				const contentCleanup = namedEffect('setShadow', () => {
+					const template = computed(describeTemplate)
+					// template is already a DOM element from h()
+					shadow.replaceChildren(unwrap(template))
+				}) /*/
+				const contentCleanup = watch(
+					() => instance.template,
+					(template) => {
+						shadow.replaceChildren(unwrap(template.mount(instance.context)))
+					},
+					{ immediate: true }
+				)*/
+				storeCleanupForElement(host, contentCleanup, instance)
+
+				return host
+			},
+		}
 	}
 
-	// Create plain HTML element
 	const element = document.createElement(tag)
 
 	// Set properties
@@ -102,7 +122,7 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 		if (key.startsWith('on:') && typeof value === 'function') {
 			// Event handler
 			const eventType = key.slice(3).toLowerCase()
-			const eventCleanup = effect(() => {
+			const eventCleanup = namedEffect(key, () => {
 				const registeredEvent = value()
 				element.addEventListener(eventType, registeredEvent)
 				return () => element.removeEventListener(eventType, registeredEvent)
@@ -111,7 +131,7 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 		} else if (key === 'class') {
 			if (typeof value === 'function') {
 				// Reactive class (e.g., `class={() => ['btn', { active: this.isActive }]}`)
-				const classCleanup = effect(() => {
+				const classCleanup = namedEffect('className', () => {
 					element.className = classNames(value())
 				})
 				storeCleanupForElement(element, classCleanup)
@@ -121,7 +141,7 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 			}
 		} else if (typeof value === 'function') {
 			// Reactive prop (e.g., `prop={() => this.counter}`)
-			const propCleanup = effect(() => {
+			const propCleanup = namedEffect(`prop:${key}`, () => {
 				element[key] = value()
 			})
 			storeCleanupForElement(element, propCleanup)
@@ -136,36 +156,32 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 		}
 	}
 
-	// Enhanced children management with better array and .map() support
-	const childrenCleanup = effect(() => {
-		// Render children
-		if (children && !props?.innerHTML) {
-			// Clean up old DOM children's effects
-			/*const oldChildren = Array.from(element.children)
-			oldChildren.forEach((child) => {
-				if (child instanceof HTMLElement) {
-					cleanupElementAndChildren(child)
-				}
-			})*/
-
-			// Process new children
-			const processedChildren = processChildren(children)
-
-			const replaceChildrenCleanup = effect(() => {
-				// Replace children
-				element.replaceChildren(...unwrap(processedChildren.map(unwrap)))
-			})
-
-			// Return cleanup function
-			return () => {
-				processedChildren.stop?.()
-				replaceChildrenCleanup()
+	// Create plain HTML element - also return mount object for consistency
+	return {
+		mount(context: Record<PropertyKey, any> = {}) {
+			function mounted(x: any) {
+				return x && typeof x === 'object' && 'mount' in x ? x.mount(context) : x
 			}
-		}
-	})
-	storeCleanupForElement(element, childrenCleanup)
+			children = Array.isArray(children) ? children.map(mounted) : mounted(children)
+			// Enhanced children management with better array and .map() support
+			const childrenCleanup = namedEffect('mount-children', () => {
+				// Render children
+				if (children && !props?.innerHTML) {
+					// Process new children
+					const processedChildren = processChildren(children, context)
 
-	return element
+					// Replace children
+					element.replaceChildren(...unwrap(processedChildren.map(unwrap)))
+
+					// Return cleanup function
+					return processedChildren.stop
+				}
+			})
+			storeCleanupForElement(element, childrenCleanup)
+
+			return element
+		},
+	}
 }
 
 // Optional: Add JSX support for fragments
@@ -174,7 +190,7 @@ export const Fragment = (props: { children: Child[] }) => props.children
 // Make h available globally for JSX
 declare global {
 	namespace JSX {
-		interface Element extends Node {}
+		type Element = { mount(context?: Record<PropertyKey, any>): Node }
 		interface ElementClass {
 			template: any
 		}

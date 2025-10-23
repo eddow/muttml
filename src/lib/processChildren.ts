@@ -1,4 +1,5 @@
-import { computed, effect, reactive, unwrap } from 'mutts/src'
+import { computed, reactive, unwrap } from 'mutts/src'
+import { namedEffect } from './debug'
 
 /**
  * A child can be:
@@ -24,6 +25,9 @@ export type Intermediates = NodeDesc | NodeDesc[]
  * - If primitive (string/number), create text node
  */
 function toNode(value: NodeDesc): Node {
+	if (value && typeof value === 'object' && 'mount' in value) {
+		debugger
+	}
 	if (value instanceof Node) {
 		return unwrap(value)
 	}
@@ -39,21 +43,30 @@ function toNode(value: NodeDesc): Node {
  *
  * Returns a flat array of DOM nodes suitable for replaceChildren()
  */
-export function processChildren(children: Child[]): Node[] & { stop?: () => void } {
+export function processChildren(
+	children: Child[],
+	context: Record<PropertyKey, any>
+): Node[] & { stop?: () => void } {
 	if (!children || children.length === 0) {
 		return []
 	}
+	function mounted(x: any) {
+		return x && typeof x === 'object' && 'mount' in x ? x.mount(context) : x
+	}
 	const perChild = computed.map(children, (child) => {
-		if (Array.isArray(child)) return processChildren(child)
-		const partial = typeof child === 'function' ? child() : child
-		return Array.isArray(partial) ? partial.map(toNode) : toNode(partial)
+		if (Array.isArray(child)) return processChildren(child, context)
+		return typeof child === 'function' ? computed(child) : child
 	})
-
+	const mountedChildren = computed.map(perChild, (partial) => {
+		return Array.isArray(partial)
+			? partial.map((p) => toNode(mounted(p)))
+			: toNode(mounted(partial))
+	})
 	// Second loop: Flatten the temporary results into final Node[]
 	const result: Node[] = reactive([])
-	const stop = effect(() => {
+	const stop = namedEffect('processChildren', () => {
 		result.length = 0
-		for (const item of perChild) {
+		for (const item of mountedChildren) {
 			if (Array.isArray(item)) {
 				result.push(...item)
 			} else {

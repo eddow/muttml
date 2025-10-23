@@ -2,10 +2,10 @@
  * Wrapper Component to demonstrate children usage
  */
 
-import { h, MuttComponent } from '..'
+import { h, PounceComponent } from '..'
 import WrapperCSS from './Wrapper.scss?inline'
 
-class WrapperComponent extends MuttComponent<{}> {
+class WrapperComponent extends PounceComponent<{}> {
 	constructor(props: Record<string, any> = {}, children: any[] = [], host: HTMLElement) {
 		super(props, children, host)
 	}

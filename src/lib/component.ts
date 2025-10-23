@@ -1,6 +1,8 @@
 import { Eventful, EventsBase, reactive, unwrap } from 'mutts/src'
 
-export abstract class MuttComponent<Events extends EventsBase> extends Eventful<Events> {
+export abstract class PounceComponent<Events extends EventsBase> extends Eventful<Events> {
+	public context: Record<PropertyKey, any> = {}
+
 	constructor(
 		protected readonly props: Record<string, any> = {},
 		protected readonly children: any[] = [],
@@ -35,5 +37,21 @@ export abstract class MuttComponent<Events extends EventsBase> extends Eventful<
 
 	public get style(): string | undefined {
 		return undefined
+	}
+
+	/**
+	 * Lifecycle method called when the component is mounted
+	 * Override this method in your components to perform setup tasks
+	 */
+	public mount(): void {
+		// Default implementation - override in subclasses
+	}
+
+	/**
+	 * Lifecycle method called when the component is unmounted
+	 * Override this method in your components to perform cleanup tasks
+	 */
+	public unmount(): void {
+		// Default implementation - override in subclasses
 	}
 }

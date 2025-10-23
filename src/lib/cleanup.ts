@@ -6,41 +6,59 @@ const elementCleanupMap = new WeakMap<HTMLElement, Set<() => void>>()
 /**
  * FinalizationRegistry to detect when elements are garbage collected
  */
-const cleanupRegistry = new FinalizationRegistry((heldValue: Set<() => void>) => {
-	const cleanups = heldValue
+const cleanupRegistry = new FinalizationRegistry(
+	(heldValue: { cleanups: Set<() => void>; componentInstance?: any }) => {
+		const { cleanups, componentInstance } = heldValue
 
-	if (cleanups && cleanups.size > 0) {
-		// Debug logging (can be removed in production)
-		if (typeof window !== 'undefined' && (window as any).DEBUG_CLEANUP) {
-			console.log(`[Cleanup] Element garbage collected, cleaning up ${cleanups.size} functions`)
-		}
+		if (cleanups && cleanups.size > 0) {
+			// Debug logging (can be removed in production)
+			if (typeof window !== 'undefined' && (window as any).DEBUG_CLEANUP) {
+				console.log(`[Cleanup] Element garbage collected, cleaning up ${cleanups.size} functions`)
+			}
 
-		// Call all cleanup functions
-		for (const cleanup of cleanups) {
-			try {
-				cleanup()
-				if (typeof window !== 'undefined' && (window as any).DEBUG_CLEANUP) {
-					console.log(`[Cleanup] ✓ Cleanup function executed successfully`)
+			// Call component unmount lifecycle if it exists
+			if (componentInstance && typeof componentInstance.unmount === 'function') {
+				try {
+					componentInstance.unmount()
+					if (typeof window !== 'undefined' && (window as any).DEBUG_CLEANUP) {
+						console.log(`[Cleanup] ✓ Component unmount lifecycle executed`)
+					}
+				} catch (error) {
+					console.warn('Error during component unmount:', error)
 				}
-			} catch (error) {
-				console.warn('Error during element cleanup:', error)
+			}
+
+			// Call all cleanup functions
+			for (const cleanup of cleanups) {
+				try {
+					cleanup()
+					if (typeof window !== 'undefined' && (window as any).DEBUG_CLEANUP) {
+						console.log(`[Cleanup] ✓ Cleanup function executed successfully`)
+					}
+				} catch (error) {
+					console.warn('Error during element cleanup:', error)
+				}
 			}
 		}
 	}
-})
+)
 
 /**
  * Store a cleanup function for an element
  */
-export function storeCleanupForElement(element: HTMLElement, cleanup: () => void) {
+export function storeCleanupForElement(
+	element: HTMLElement,
+	cleanup: () => void,
+	componentInstance?: any
+) {
 	let cleanups = elementCleanupMap.get(element)
 	if (!cleanups) {
 		cleanups = new Set()
 		elementCleanupMap.set(element, cleanups)
 
 		// Register the element with FinalizationRegistry for GC cleanup
-		// We register the element itself, and store the cleanup functions as the held value
-		cleanupRegistry.register(element, cleanups)
+		// We register the element itself, and store both cleanup functions and component instance
+		cleanupRegistry.register(element, { cleanups, componentInstance })
 	}
 	cleanups.add(cleanup)
 

@@ -3,7 +3,7 @@
  */
 
 import { computed } from 'mutts/src'
-import { h, MuttComponent } from '..'
+import { h, PounceComponent } from '..'
 import TodoCSS from './Todo.scss?inline'
 
 interface Todo {
@@ -13,13 +13,25 @@ interface Todo {
 	createdAt: Date
 }
 
-class TodoWebComponent extends MuttComponent<{}> {
+class TodoWebComponent extends PounceComponent<{}> {
 	private todos: Todo[] = []
 	private filter: 'all' | 'active' | 'completed' = 'all'
 	private newTodoText: string = ''
 
 	constructor(props: Record<string, any> = {}, children: any[] = [], host: HTMLElement) {
 		super(props, children, host)
+	}
+
+	public mount(): void {
+		console.log('🎯 Todo component mounted!', {
+			context: this.context
+		})
+	}
+
+	public unmount(): void {
+		console.log('👋 Todo component unmounted!', {
+			todoCount: this.todos.length
+		})
 	}
 
 	static readonly style = TodoCSS
@@ -95,7 +107,7 @@ class TodoWebComponent extends MuttComponent<{}> {
 							</div>
 						) : (
 							computed.map(filteredTodos, todo => (
-								<div key={todo.id.toString()} class="todo-item">
+								<div class="todo-item">
 									<input
 										type="checkbox"
 										checked={todo.completed}
@@ -173,9 +185,9 @@ class TodoWebComponent extends MuttComponent<{}> {
 	private getFilteredTodos(): Todo[] {
 		switch (this.filter) {
 			case 'active':
-				return this.todos.filter(todo => !todo.completed)
+				return computed.filter(this.todos, todo => !todo.completed)
 			case 'completed':
-				return this.todos.filter(todo => todo.completed)
+				return computed.filter(this.todos, todo => todo.completed)
 			default:
 				return this.todos
 		}

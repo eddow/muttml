@@ -17,7 +17,7 @@ document.addEventListener('DOMContentLoaded', (): void => {
 	}
 	
 	// Add some introductory content using inline JSX
-	const introElement = (
+	const introElementMount = (
 		<div>
 			<div style="text-align: center; margin-bottom: 30px;">
 				<p style="color: #666; font-size: 18px;">
@@ -41,32 +41,30 @@ document.addEventListener('DOMContentLoaded', (): void => {
 		</div>
 	)
 
-	app.appendChild(introElement)
+	app.appendChild(introElementMount.mount())
 	
 	// Add components using PascalCase JSX with children
-	const components = (
+	const componentsMount = (
 		<div>
-			<WrapperComponent>
-				<CounterComponent
-					count={10}
-					on:countChanged={(newCount: number, oldCount: number) => {
-						console.log(`Counter changed from ${oldCount} to ${newCount}`)
-					}}
-					on:countIncremented={(newCount: number) => {
-						console.log(`Counter incremented to ${newCount}`)
-					}}
-					on:countDecremented={(newCount: number) => {
-						console.log(`Counter decremented to ${newCount}`)
-					}}
-					on:countReset={() => {
-						console.log('Counter was reset')
-					}}
-				/>
-			</WrapperComponent>
+			<CounterComponent
+				count={10}
+				on:countChanged={(newCount: number, oldCount: number) => {
+					console.log(`Counter changed from ${oldCount} to ${newCount}`)
+				}}
+				on:countIncremented={(newCount: number) => {
+					console.log(`Counter incremented to ${newCount}`)
+				}}
+				on:countDecremented={(newCount: number) => {
+					console.log(`Counter decremented to ${newCount}`)
+				}}
+				on:countReset={() => {
+					console.log('Counter was reset')
+				}}
+			/>
 			<WrapperComponent>
 				<TodoComponent />
 			</WrapperComponent>
 		</div>
 	)
-	app.appendChild(components)
+	app.appendChild(componentsMount.mount())
 })
