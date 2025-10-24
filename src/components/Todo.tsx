@@ -80,7 +80,6 @@ class TodoWebComponent extends PounceComponent<{}, TodoProps> {
 							class="todo-input"
 							placeholder={placeholder()}
 							value={this.newTodoText}
-							on:input={(e: Event) => this.updateNewTodoText(e)}
 							on:keypress={(e: KeyboardEvent) => e.key === 'Enter' && this.addTodo()}
 						/>
 						<button class="add-button" on:click={() => this.addTodo()}>
@@ -227,11 +226,6 @@ class TodoWebComponent extends PounceComponent<{}, TodoProps> {
 
 	private clearCompleted(): void {
 		this.todos = this.todos.filter(todo => !todo.completed)
-	}
-
-	private updateNewTodoText(event: Event): void {
-		const target = event.target as HTMLInputElement
-		this.newTodoText = target.value
 	}
 
 	@computed

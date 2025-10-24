@@ -67,10 +67,6 @@ document.addEventListener('DOMContentLoaded', (): void => {
 				<p>This input is bound to the same state as the counter:</p>
 				<input 
 					value={state.sharedCount}
-					on:input={(e) => {
-						const target = e.target as HTMLInputElement
-						state.sharedCount = parseInt(target.value, 10) || 0
-					}}
 					style="padding: 8px; margin: 5px; border: 1px solid #ccc; border-radius: 4px;"
 				/>
 				<p style="margin: 5px 0; color: #666;">

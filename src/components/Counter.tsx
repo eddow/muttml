@@ -68,25 +68,25 @@ export default class CounterWebComponent extends PounceComponent<CounterEvents, 
 	}
 
 	get template() {
-		const maxValue = this.props.maxValue ?? 100
-		const minValue = this.props.minValue ?? 0
-		const step = this.props.step ?? 1
-		const disabled = this.props.disabled ?? false
-		const showSlider = this.props.showSlider ?? true
-		const showInput = this.props.showInput ?? true
-		const label = this.props.label ?? 'Counter Component (JSX)'
+		const maxValue = ()=> this.props.maxValue ?? 100
+		const minValue = ()=> this.props.minValue ?? 0
+		const step = ()=> this.props.step ?? 1
+		const disabled = ()=> this.props.disabled ?? false
+		const showSlider = ()=> this.props.showSlider ?? true
+		const showInput = ()=> this.props.showInput ?? true
+		const label = ()=> this.props.label ?? 'Counter Component (JSX)'
 
 		return (
 			<div>
 				<div>
-					<h2>{label}</h2>
+					<h2>{label()}</h2>
 					<div class="count-display">
 						Count: <span class="counter-text">{this.count}</span>
 					</div>
 					<div class="message">
 						{this.count === 0 ? 'Click the button to increment!' : `Current count: ${this.count}`}
 					</div>
-					{showSlider && (
+					{showSlider() && (
 						<div class="slider-container">
 							<label class="slider-label" htmlFor="count-slider">
 								Set Count: {this.count}
@@ -95,16 +95,15 @@ export default class CounterWebComponent extends PounceComponent<CounterEvents, 
 								type="range"
 								id="count-slider"
 								class="slider"
-								min={minValue}
-								max={maxValue}
-								step={step}
+								min={minValue()}
+								max={maxValue()}
+								step={step()}
 								value={this.count}
-								disabled={disabled}
-								on:input={(e: Event) => this.handleSliderChange(e)}
+								disabled={disabled()}
 							/>
 						</div>
 					)}
-					{showInput && (
+					{showInput() && (
 						<div class="input-container">
 							<label class="input-label" htmlFor="count-input">
 								Direct Input:
@@ -113,23 +112,22 @@ export default class CounterWebComponent extends PounceComponent<CounterEvents, 
 								type="number"
 								id="count-input"
 								class="count-input"
-								min={minValue}
-								max={maxValue}
-								step={step}
+								min={minValue()}
+								max={maxValue()}
+								step={step()}
 								value={this.count}
-								disabled={disabled}
-								on:input={(e: Event) => this.handleInputChange(e)}
+								disabled={disabled()}
 							/>
 						</div>
 					)}
 					<div class="controls">
-						<button class="decrement" disabled={disabled} on:click={() => this.decrement()}>
+						<button class="decrement" disabled={disabled()} on:click={() => this.decrement()}>
 							-
 						</button>
-						<button class="reset" disabled={disabled} on:click={() => this.reset()}>
+						<button class="reset" disabled={disabled()} on:click={() => this.reset()}>
 							Reset
 						</button>
-						<button class="increment" disabled={disabled} on:click={() => this.increment()}>
+						<button class="increment" disabled={disabled()} on:click={() => this.increment()}>
 							+
 						</button>
 					</div>
@@ -157,29 +155,5 @@ export default class CounterWebComponent extends PounceComponent<CounterEvents, 
 		this.count = 0
 		this.emit('countReset')
 		this.emit('countChanged', this.count, oldCount)
-	}
-
-	private handleSliderChange(e: Event): void {
-		const target = e.target as HTMLInputElement
-		const oldCount = this.count
-		this.count = parseInt(target.value, 10)
-		this.emit('countChanged', this.count, oldCount)
-	}
-
-	private handleInputChange(e: Event): void {
-		const target = e.target as HTMLInputElement
-		const oldCount = this.count
-		const newValue = parseInt(target.value, 10)
-		const maxValue = this.props.maxValue ?? 100
-		const minValue = this.props.minValue ?? 0
-		
-		// Validate the input value using typed props
-		if (!isNaN(newValue) && newValue >= minValue && newValue <= maxValue) {
-			this.count = newValue
-			this.emit('countChanged', this.count, oldCount)
-		} else {
-			// Reset to old value if invalid
-			target.value = this.count.toString()
-		}
 	}
 }

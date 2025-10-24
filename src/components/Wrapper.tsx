@@ -22,25 +22,25 @@ class WrapperComponent extends PounceComponent<{}, WrapperProps> {
 	static readonly style = WrapperCSS
 
 	get template() {
-		const title = this.props.title ?? 'Wrapper Component'
-		const description = this.props.description ?? 'This wrapper contains children:'
-		const className = this.props.className ?? 'wrapper'
-		const showChildren = this.props.showChildren ?? true
-		const maxChildren = this.props.maxChildren
+		const title = ()=> this.props.title ?? 'Wrapper Component'
+		const description = ()=> this.props.description ?? 'This wrapper contains children:'
+		const className = ()=> this.props.className ?? 'wrapper'
+		const showChildren = ()=> this.props.showChildren ?? true
+		const maxChildren = ()=> this.props.maxChildren
 		
 		// Use children from constructor or props
 		const children = this.children
 		
 		// Limit children if maxChildren is specified
-		const childrenToShow = maxChildren 
-			? children.slice(0, maxChildren)
+		const childrenToShow = maxChildren() 
+			? children.slice(0, maxChildren())
 			: children
 
 		return (
-			<div class={className}>
-				<h3>{title}</h3>
-				<p>{description}</p>
-				{showChildren && (
+			<div class={className()}>
+				<h3>{title()}</h3>
+				<p>{description()}</p>
+				{showChildren() && (
 					<div class="children">
 						{childrenToShow}
 					</div>

@@ -58,7 +58,7 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 
 		// Handle component events from props
 		for (const [key, value] of Object.entries(props || {})) {
-			if (key.startsWith('on:') && typeof value === 'function') {
+			if (key.startsWith('on:')) {
 				const eventName = key.slice(3) // Remove 'on:' prefix
 				// Register the event listener on the component
 				const eventCleanup = namedEffect('eventRegister', () => {
@@ -120,11 +120,11 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 	for (const [key, value] of Object.entries(props || {})) {
 		if (key === 'children') continue // Skip children, we'll handle them separately
 
-		if (key.startsWith('on:') && typeof value === 'function') {
+		if (key.startsWith('on:')) {
 			// Event handler
 			const eventType = key.slice(3).toLowerCase()
 			const eventCleanup = namedEffect(key, () => {
-				const registeredEvent = atomic(value())
+				const registeredEvent = atomic(value.get?.() ?? value())
 				element.addEventListener(eventType, registeredEvent)
 				return () => element.removeEventListener(eventType, registeredEvent)
 			})
