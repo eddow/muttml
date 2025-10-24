@@ -24,7 +24,7 @@ export function defined<T>(value: T | undefined, message = 'Value is defined'): 
 export const traces: Record<string, typeof console | undefined> = {}
 
 //traces.advertising = console
-const debugMutts = false
+const debugMutts = true
 if (debugMutts) {
 	reactiveOptions.chain = (target: Function, caller?: Function) => {
 		console.log(caller ? `${caller.name} -> ${target.name}` : `-> ${target.name}`)

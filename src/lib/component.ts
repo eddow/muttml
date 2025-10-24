@@ -6,11 +6,13 @@ export abstract class PounceComponent<Events extends EventsBase> extends Eventfu
 	constructor(
 		protected readonly props: Record<string, any> = {},
 		protected readonly children: any[] = [],
-		protected readonly host: HTMLElement
+		protected readonly host: PounceElement
 	) {
 		super()
+		const that = reactive(this)
+		host.component = that
 		// biome-ignore lint/correctness/noConstructorReturn: This is the whole point here
-		return reactive(this)
+		return that
 	}
 
 	public on(events: Partial<Events>): void
@@ -55,3 +57,21 @@ export abstract class PounceComponent<Events extends EventsBase> extends Eventfu
 		// Default implementation - override in subclasses
 	}
 }
+/**
+ * Neutral custom element that does nothing but host Shadow DOM
+ */
+export class PounceElement extends HTMLElement {
+	component?: PounceComponent<any>
+	constructor() {
+		super()
+		this.attachShadow({ mode: 'open' })
+	}
+	connectedCallback() {
+		this.component?.mount()
+	}
+	disconnectedCallback() {
+		this.component?.unmount()
+	}
+}
+
+customElements.define('pounce-element', PounceElement)

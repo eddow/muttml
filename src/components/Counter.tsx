@@ -2,7 +2,7 @@
  * Counter Web Component using inline JSX templating
  */
 
-import { h, PounceComponent } from '..'
+import { h, PounceComponent, PounceElement } from '..'
 import CounterCSS from './Counter.scss?inline'
 
 // Define the events this component can emit
@@ -16,7 +16,7 @@ interface CounterEvents extends Record<string, (...args: any[]) => void> {
 export default class CounterWebComponent extends PounceComponent<CounterEvents> {
 	private count: number = 0
 
-	constructor(props: {count?: number} = {}, children: any[] = [], host: HTMLElement) {
+	constructor(props: {count?: number} = {}, children: any[] = [], host: PounceElement) {
 		super(props, children, host)
 		this.count = props.count ?? 0
 	}

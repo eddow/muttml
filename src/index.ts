@@ -1,7 +1,6 @@
 // Re-export everything from the lib modules
 export { storeCleanupForElement } from './lib/cleanup'
-export { PounceComponent } from './lib/component'
-export { NeutralHost } from './lib/host'
+export { PounceComponent, PounceElement } from './lib/component'
 export { getComponent, hasComponent, registerComponent } from './lib/registry'
 export { Fragment, h } from './lib/renderer'
 

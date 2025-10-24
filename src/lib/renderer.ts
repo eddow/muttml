@@ -1,8 +1,8 @@
-import { computed, reactive, unwrap } from 'mutts/src'
+import { computed, effect, reactive, unwrap } from 'mutts/src'
+import { PounceElement } from '..'
 import { classNames } from './classNames'
 import { storeCleanupForElement } from './cleanup'
 import { namedEffect } from './debug'
-import { NeutralHost } from './host'
 import { Child, processChildren } from './processChildren'
 import { getComponent } from './registry'
 
@@ -23,7 +23,7 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 
 	// If we have a component, return mount function
 	if (ComponentCtor) {
-		const host = new NeutralHost()
+		const host = new PounceElement()
 		const shadow = host.shadowRoot!
 
 		const computedProps = reactive<any>({})
@@ -82,31 +82,23 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 		return {
 			mount(context: Record<PropertyKey, any> = {}) {
 				// Set context on the component instance
-				instance.context = Object.create(context)
+				instance.context = context = Object.create(context)
 
 				function describeTemplate() {
 					return instance.template.mount(context)
 				}
-
+				/*
 				// Call mount lifecycle hook
 				if (typeof instance.mount === 'function') {
 					instance.mount()
-				}
-				//*
+				}*/
 				// Effect for content - only updates content container
 				const contentCleanup = namedEffect('setShadow', () => {
 					const template = computed(describeTemplate)
 					// template is already a DOM element from h()
 					shadow.replaceChildren(unwrap(template))
-				}) /*/
-				const contentCleanup = watch(
-					() => instance.template,
-					(template) => {
-						shadow.replaceChildren(unwrap(template.mount(instance.context)))
-					},
-					{ immediate: true }
-				)*/
-				storeCleanupForElement(host, contentCleanup, instance)
+				})
+				storeCleanupForElement(host, contentCleanup)
 
 				return host
 			},
@@ -164,7 +156,7 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 			}
 			children = Array.isArray(children) ? children.map(mounted) : mounted(children)
 			// Enhanced children management with better array and .map() support
-			const childrenCleanup = namedEffect('mount-children', () => {
+			const childrenCleanup = effect(function mountChildren() {
 				// Render children
 				if (children && !props?.innerHTML) {
 					// Process new children

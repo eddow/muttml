@@ -2,11 +2,11 @@
  * Wrapper Component to demonstrate children usage
  */
 
-import { h, PounceComponent } from '..'
+import { h, PounceComponent, PounceElement } from '..'
 import WrapperCSS from './Wrapper.scss?inline'
 
 class WrapperComponent extends PounceComponent<{}> {
-	constructor(props: Record<string, any> = {}, children: any[] = [], host: HTMLElement) {
+	constructor(props: Record<string, any> = {}, children: any[] = [], host: PounceElement) {
 		super(props, children, host)
 	}
 

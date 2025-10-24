@@ -3,7 +3,7 @@
  */
 
 import { computed } from 'mutts/src'
-import { h, PounceComponent } from '..'
+import { h, PounceComponent, PounceElement } from '..'
 import TodoCSS from './Todo.scss?inline'
 
 interface Todo {
@@ -18,7 +18,7 @@ class TodoWebComponent extends PounceComponent<{}> {
 	private filter: 'all' | 'active' | 'completed' = 'all'
 	private newTodoText: string = ''
 
-	constructor(props: Record<string, any> = {}, children: any[] = [], host: HTMLElement) {
+	constructor(props: Record<string, any> = {}, children: any[] = [], host: PounceElement) {
 		super(props, children, host)
 	}
 
@@ -50,10 +50,6 @@ class TodoWebComponent extends PounceComponent<{}> {
 	}
 
 	public get template() {
-		const filteredTodos = this.getFilteredTodos()
-		const activeCount = this.todos.filter(t => !t.completed).length
-		const completedCount = this.todos.filter(t => t.completed).length
-
 		return (
 			<div>
 				<div>
@@ -86,19 +82,19 @@ class TodoWebComponent extends PounceComponent<{}> {
 							class={['filter-button', { active: this.filter === 'active' }]}
 							on:click={() => this.setFilter('active')}
 						>
-							Active ({activeCount})
+							Active ({this.activeCount})
 						</button>
 						<button
 							class={['filter-button', { active: this.filter === 'completed' }]}
 							on:click={() => this.setFilter('completed')}
 						>
-							Completed ({completedCount})
+							Completed ({this.completedCount})
 						</button>
 					</div>
 					
 					{/* Todo list */}
 					<div class="todo-list">
-						{filteredTodos.length === 0 ? (
+						{this.filteredTodos.length === 0 ? (
 							<div class="empty-message">
 								{this.todos.length === 0 
 									? 'No todos yet. Add one above!' 
@@ -106,8 +102,9 @@ class TodoWebComponent extends PounceComponent<{}> {
 								}
 							</div>
 						) : (
-							computed.map(filteredTodos, todo => (
+							computed.map(this.filteredTodos, todo => (
 								<div class="todo-item">
+									{console.log('render',todo.text)}
 									<input
 										type="checkbox"
 										checked={todo.completed}
@@ -126,15 +123,49 @@ class TodoWebComponent extends PounceComponent<{}> {
 							))
 						)}
 					</div>
+					{/*
+					<div class="todo-list">
+						<case of={this.filteredTodos.length === 0}>{{
+							true: 
+								<div class="empty-message">
+									{this.todos.length === 0 
+										? 'No todos yet. Add one above!' 
+										: `No ${this.filter} todos.`
+									}
+								</div>,
+							false: 
+								<for in={this.filteredTodos}>{
+									(todo: Todo) => (
+										<div class="todo-item">
+											<input
+												type="checkbox"
+												checked={todo.completed}
+												on:change={() => this.toggleTodo(todo.id)}
+											/>
+											<span class={['todo-text', { completed: todo.completed }]}>
+												{todo.text}
+											</span>
+											<button
+												class="delete-button"
+												on:click={() => this.deleteTodo(todo.id)}
+											>
+												Delete
+											</button>
+										</div>
+									)
+								}</for>
+						}}</case>
+					</div>
+					*/}
 					
 					{/* Clear completed section */}
-					{completedCount > 0 && (
+					{this.completedCount > 0 && (
 						<div class="clear-section">
 							<button
 								class="clear-button"
 								on:click={() => this.clearCompleted()}
 							>
-								Clear {completedCount} completed
+								Clear {this.completedCount} completed
 							</button>
 						</div>
 					)}
@@ -146,11 +177,15 @@ class TodoWebComponent extends PounceComponent<{}> {
 	private addTodo(): void {
 		const text = this.newTodoText.trim()
 		if (!text) return
+		let completed = false
 
 		const newTodo: Todo = {
 			id: Date.now(),
 			text,
-			completed: false,
+			get completed() {
+				return completed
+			},
+			set completed(value) { completed = value },
 			createdAt: new Date()
 		}
 
@@ -182,7 +217,18 @@ class TodoWebComponent extends PounceComponent<{}> {
 		this.newTodoText = target.value
 	}
 
-	private getFilteredTodos(): Todo[] {
+	@computed
+	private get activeCount(): number {
+		return computed.filter(this.todos, todo => !todo.completed).length
+	}
+
+	@computed
+	private get completedCount(): number {
+		return computed.filter(this.todos, todo => todo.completed).length
+	}
+
+	@computed
+	private get filteredTodos(): Todo[] {
 		switch (this.filter) {
 			case 'active':
 				return computed.filter(this.todos, todo => !todo.completed)

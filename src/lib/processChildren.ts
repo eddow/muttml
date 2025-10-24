@@ -24,8 +24,9 @@ export type Intermediates = NodeDesc | NodeDesc[]
  * - If already a Node, return as-is
  * - If primitive (string/number), create text node
  */
-function toNode(value: NodeDesc): Node {
-	if (value && typeof value === 'object' && 'mount' in value) {
+function toNode(value: NodeDesc): Node | false {
+	if (!value && typeof value !== 'number') return false
+	if (typeof value === 'object' && 'mount' in value) {
 		debugger
 	}
 	if (value instanceof Node) {
@@ -54,8 +55,12 @@ export function processChildren(
 		return x && typeof x === 'object' && 'mount' in x ? x.mount(context) : x
 	}
 	const perChild = computed.map(children, (child) => {
-		if (Array.isArray(child)) return processChildren(child, context)
-		return typeof child === 'function' ? computed(child) : child
+		return Array.isArray(child)
+			? processChildren(child, context)
+			: typeof child === 'function'
+				? // ! When `computed(child) -> doesn't render on add/remove anymore
+					child()
+				: child
 	})
 	const mountedChildren = computed.map(perChild, (partial) => {
 		return Array.isArray(partial)
@@ -68,14 +73,14 @@ export function processChildren(
 		result.length = 0
 		for (const item of mountedChildren) {
 			if (Array.isArray(item)) {
-				result.push(...item)
-			} else {
+				result.push(...(item.filter(Boolean) as Node[]))
+			} else if (item) {
 				result.push(item)
 			}
 		}
 	})
 	Object.defineProperty(result, 'stop', {
-		get: () => stop,
+		value: stop,
 	})
 	return result
 }
