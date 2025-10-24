@@ -13,13 +13,27 @@ interface Todo {
 	createdAt: Date
 }
 
-class TodoWebComponent extends PounceComponent<{}> {
+// Define the props interface for type validation
+interface TodoProps {
+	initialTodos?: Todo[]
+	placeholder?: string
+	showFilters?: boolean
+	showClearCompleted?: boolean
+	maxTodos?: number
+	allowEmptyTodos?: boolean
+}
+
+class TodoWebComponent extends PounceComponent<{}, TodoProps> {
 	private todos: Todo[] = []
 	private filter: 'all' | 'active' | 'completed' = 'all'
 	private newTodoText: string = ''
 
-	constructor(props: Record<string, any> = {}, children: any[] = [], host: PounceElement) {
+	constructor(props: TodoProps = {}, children: any[] = [], host: PounceElement) {
 		super(props, children, host)
+		// Initialize with provided todos if any
+		if (props.initialTodos) {
+			this.todos = [...props.initialTodos]
+		}
 	}
 
 	public mount(): void {
@@ -50,6 +64,10 @@ class TodoWebComponent extends PounceComponent<{}> {
 	}
 
 	public get template() {
+		const placeholder = this.props.placeholder ?? 'Add a new todo...'
+		const showFilters = this.props.showFilters ?? true
+		const showClearCompleted = this.props.showClearCompleted ?? true
+
 		return (
 			<div>
 				<div>
@@ -60,7 +78,7 @@ class TodoWebComponent extends PounceComponent<{}> {
 						<input
 							type="text"
 							class="todo-input"
-							placeholder="Add a new todo..."
+							placeholder={placeholder}
 							value={this.newTodoText}
 							on:input={(e: Event) => this.updateNewTodoText(e)}
 							on:keypress={(e: KeyboardEvent) => e.key === 'Enter' && this.addTodo()}
@@ -71,26 +89,28 @@ class TodoWebComponent extends PounceComponent<{}> {
 					</div>
 					
 					{/* Filter buttons */}
-					<div class="filters">
-						<button
-							class={['filter-button', { active: this.filter === 'all' }]}
-							on:click={() => this.setFilter('all')}
-						>
-							All
-						</button>
-						<button
-							class={['filter-button', { active: this.filter === 'active' }]}
-							on:click={() => this.setFilter('active')}
-						>
-							Active ({this.activeCount})
-						</button>
-						<button
-							class={['filter-button', { active: this.filter === 'completed' }]}
-							on:click={() => this.setFilter('completed')}
-						>
-							Completed ({this.completedCount})
-						</button>
-					</div>
+					{showFilters && (
+						<div class="filters">
+							<button
+								class={['filter-button', { active: this.filter === 'all' }]}
+								on:click={() => this.setFilter('all')}
+							>
+								All
+							</button>
+							<button
+								class={['filter-button', { active: this.filter === 'active' }]}
+								on:click={() => this.setFilter('active')}
+							>
+								Active ({this.activeCount})
+							</button>
+							<button
+								class={['filter-button', { active: this.filter === 'completed' }]}
+								on:click={() => this.setFilter('completed')}
+							>
+								Completed ({this.completedCount})
+							</button>
+						</div>
+					)}
 					
 					{/* Todo list */}
 					<div class="todo-list">
@@ -159,7 +179,7 @@ class TodoWebComponent extends PounceComponent<{}> {
 					*/}
 					
 					{/* Clear completed section */}
-					{this.completedCount > 0 && (
+					{showClearCompleted && this.completedCount > 0 && (
 						<div class="clear-section">
 							<button
 								class="clear-button"
@@ -176,7 +196,13 @@ class TodoWebComponent extends PounceComponent<{}> {
 
 	private addTodo(): void {
 		const text = this.newTodoText.trim()
-		if (!text) return
+		const allowEmptyTodos = this.props.allowEmptyTodos ?? false
+		const maxTodos = this.props.maxTodos
+		
+		// Validate based on typed props
+		if (!text && !allowEmptyTodos) return
+		if (maxTodos && this.todos.length >= maxTodos) return
+		
 		let completed = false
 
 		const newTodo: Todo = {
