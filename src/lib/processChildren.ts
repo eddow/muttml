@@ -26,9 +26,6 @@ export type Intermediates = NodeDesc | NodeDesc[]
  */
 function toNode(value: NodeDesc): Node | false {
 	if (!value && typeof value !== 'number') return false
-	if (typeof value === 'object' && 'mount' in value) {
-		debugger
-	}
 	if (value instanceof Node) {
 		return unwrap(value)
 	}

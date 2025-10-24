@@ -2,13 +2,12 @@
  * Counter Web Component using inline JSX templating
  */
 
-import { h, PounceComponent, PounceElement, Properties } from '..'
+import { h, PounceComponent } from '..'
 import CounterCSS from './Counter.scss?inline'
 
 // Define the component props interface
 interface CounterComponentProps {
 	count?: number
-	initialValue?: number
 	maxValue?: number
 	minValue?: number
 	step?: number
@@ -20,19 +19,22 @@ interface CounterComponentProps {
 
 // Define the events this component can emit
 interface CounterEvents extends Record<string, (...args: any[]) => void> {
-	countChanged: (newCount: number, oldCount: number) => void
-	countReset: () => void
-	countIncremented: (newCount: number) => void
-	countDecremented: (newCount: number) => void
+	countChanged(newCount: number, oldCount: number): void
+	countReset(): void
+	countIncremented(newCount: number): void
+	countDecremented(newCount: number): void
 }
 
 export default class CounterWebComponent extends PounceComponent<CounterEvents, CounterComponentProps> {
-	private count: number = 0
 
-	constructor(props: Properties<CounterComponentProps, CounterEvents> = {}, children: any[] = [], host: PounceElement) {
-		super(props, children, host)
-		// TypeScript will now validate that props conform to CounterProps interface
-		this.count = props.count ?? props.initialValue ?? 0
+	// Getter for 2-way binding support
+	get count() {
+		return this.props.count ?? 0
+	}
+
+	// Setter for 2-way binding support  
+	set count(value: number) {
+		this.props.count = value
 	}
 
 	public mount(): void {
@@ -138,14 +140,14 @@ export default class CounterWebComponent extends PounceComponent<CounterEvents, 
 
 	private increment(): void {
 		const oldCount = this.count
-		this.count += 1
+		this.count = this.count + 1
 		this.emit('countIncremented', this.count)
 		this.emit('countChanged', this.count, oldCount)
 	}
 
 	private decrement(): void {
 		const oldCount = this.count
-		this.count -= 1
+		this.count = this.count - 1
 		this.emit('countDecremented', this.count)
 		this.emit('countChanged', this.count, oldCount)
 	}

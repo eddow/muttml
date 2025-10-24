@@ -1,4 +1,4 @@
-import { computed, effect, reactive, unwrap } from 'mutts/src'
+import { atomic, computed, effect, reactive, unwrap } from 'mutts/src'
 import { PounceElement } from '..'
 import { classNames } from './classNames'
 import { storeCleanupForElement } from './cleanup'
@@ -29,12 +29,21 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 		const computedProps = reactive<any>({})
 		for (const [key, value] of Object.entries(props || {})) {
 			if (!key.startsWith('on:') && key !== 'style') {
-				if (typeof value === 'function') {
+				// Check for 2-way binding object {get:, set:}
+				if (typeof value === 'object' && value !== null && 'get' in value && 'set' in value) {
+					Object.defineProperty(computedProps, key, {
+						get: () => computed(value.get),
+						set: (newValue) => value.set(newValue),
+						enumerable: true,
+					})
+				} else if (typeof value === 'function') {
+					// One-way binding
 					Object.defineProperty(computedProps, key, {
 						get: () => computed(value),
 						enumerable: true,
 					})
 				} else {
+					// Static value
 					Object.defineProperty(computedProps, key, {
 						value: value,
 						enumerable: true,
@@ -53,7 +62,7 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 				const eventName = key.slice(3) // Remove 'on:' prefix
 				// Register the event listener on the component
 				const eventCleanup = namedEffect('eventRegister', () => {
-					return instance.on(eventName as any, value())
+					return instance.on(eventName as any, atomic(value?.get?.() ?? value()))
 				})
 				storeCleanupForElement(host, eventCleanup)
 			}
@@ -115,7 +124,7 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 			// Event handler
 			const eventType = key.slice(3).toLowerCase()
 			const eventCleanup = namedEffect(key, () => {
-				const registeredEvent = value()
+				const registeredEvent = atomic(value())
 				element.addEventListener(eventType, registeredEvent)
 				return () => element.removeEventListener(eventType, registeredEvent)
 			})
@@ -130,6 +139,27 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 			} else {
 				// Static class
 				element.className = classNames(value)
+			}
+		} else if (typeof value === 'object' && value !== null && 'get' in value && 'set' in value) {
+			// 2-way binding for regular elements (e.g., `value={{get: () => this.value, set: val => this.value = val}}`)
+			const propCleanup = namedEffect(`prop:${key}`, () => {
+				element[key] = value.get()
+			})
+			storeCleanupForElement(element, propCleanup)
+			if (tag === 'input') {
+				element.addEventListener('input', (e: Event) => {
+					const element = e.target as HTMLInputElement
+					switch (element.type) {
+						case 'checkbox':
+							if (key === 'checked') value.set(element.checked)
+							break
+						case 'number':
+							if (key === 'value') value.set(Number(element.value))
+							break
+						default:
+							if (key === 'value') value.set(element.value)
+					}
+				})
 			}
 		} else if (typeof value === 'function') {
 			// Reactive prop (e.g., `prop={() => this.counter}`)
@@ -178,24 +208,5 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 
 // Optional: Add JSX support for fragments
 export const Fragment = (props: { children: Child[] }) => props.children
-
-// Make h available globally for JSX
-declare global {
-	namespace JSX {
-		type Element = { mount(context?: Record<PropertyKey, any>): Node }
-		interface ElementClass {
-			template: any
-		}
-		interface ElementAttributesProperty {
-			props: {}
-		}
-		interface ElementChildrenAttribute {
-			children: {}
-		}
-		interface IntrinsicElements {
-			[elemName: string]: any
-		}
-	}
-}
 // Make h available globally
 ;(globalThis as any).h = h

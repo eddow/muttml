@@ -64,9 +64,9 @@ class TodoWebComponent extends PounceComponent<{}, TodoProps> {
 	}
 
 	public get template() {
-		const placeholder = this.props.placeholder ?? 'Add a new todo...'
-		const showFilters = this.props.showFilters ?? true
-		const showClearCompleted = this.props.showClearCompleted ?? true
+		const placeholder = ()=> this.props.placeholder ?? 'Add a new todo...'
+		const showFilters = ()=> this.props.showFilters ?? true
+		const showClearCompleted = ()=> this.props.showClearCompleted ?? true
 
 		return (
 			<div>
@@ -78,7 +78,7 @@ class TodoWebComponent extends PounceComponent<{}, TodoProps> {
 						<input
 							type="text"
 							class="todo-input"
-							placeholder={placeholder}
+							placeholder={placeholder()}
 							value={this.newTodoText}
 							on:input={(e: Event) => this.updateNewTodoText(e)}
 							on:keypress={(e: KeyboardEvent) => e.key === 'Enter' && this.addTodo()}
@@ -89,7 +89,7 @@ class TodoWebComponent extends PounceComponent<{}, TodoProps> {
 					</div>
 					
 					{/* Filter buttons */}
-					{showFilters && (
+					{showFilters() && (
 						<div class="filters">
 							<button
 								class={['filter-button', { active: this.filter === 'all' }]}
@@ -128,7 +128,6 @@ class TodoWebComponent extends PounceComponent<{}, TodoProps> {
 									<input
 										type="checkbox"
 										checked={todo.completed}
-										on:change={() => this.toggleTodo(todo.id)}
 									/>
 									<span class={['todo-text', { completed: todo.completed }]}>
 										{todo.text}
@@ -160,7 +159,6 @@ class TodoWebComponent extends PounceComponent<{}, TodoProps> {
 											<input
 												type="checkbox"
 												checked={todo.completed}
-												on:change={() => this.toggleTodo(todo.id)}
 											/>
 											<span class={['todo-text', { completed: todo.completed }]}>
 												{todo.text}
@@ -179,7 +177,7 @@ class TodoWebComponent extends PounceComponent<{}, TodoProps> {
 					*/}
 					
 					{/* Clear completed section */}
-					{showClearCompleted && this.completedCount > 0 && (
+					{showClearCompleted() && this.completedCount > 0 && (
 						<div class="clear-section">
 							<button
 								class="clear-button"
@@ -217,13 +215,6 @@ class TodoWebComponent extends PounceComponent<{}, TodoProps> {
 
 		this.todos.push(newTodo)
 		this.newTodoText = ''
-	}
-
-	private toggleTodo(id: number): void {
-		const todo = this.todos.find(t => t.id === id)
-		if (todo) {
-			todo.completed = !todo.completed
-		}
 	}
 
 	private deleteTodo(id: number): void {

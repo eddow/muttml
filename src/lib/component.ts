@@ -16,13 +16,14 @@ export abstract class PounceComponent<
 	Props = Record<string, any>,
 > extends Eventful<Events> {
 	public context: Record<PropertyKey, any> = {}
-
+	protected readonly props: Properties<Props, Events>
 	constructor(
-		protected readonly props: Properties<Props, Events>,
+		props: Properties<Props, Events>,
 		protected readonly children: Element[] = [],
 		protected readonly host: PounceElement
 	) {
 		super()
+		this.props = props
 		const that = reactive(this)
 		host.component = that
 

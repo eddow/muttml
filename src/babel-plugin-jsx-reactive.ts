@@ -64,9 +64,24 @@ export function babelPluginJsxReactive({
 							if (t.isJSXExpressionContainer(attr.value)) {
 								const expression = attr.value.expression
 								if (!t.isJSXEmptyExpression(expression)) {
-									// Rewrite `prop={this.counter}` into `prop={() => this.counter}`
-									const arrowFunction = t.arrowFunctionExpression([], expression)
-									attr.value = t.jsxExpressionContainer(arrowFunction)
+									// Check if this is a simple property access for 2-way binding
+									if (t.isMemberExpression(expression) || t.isIdentifier(expression)) {
+										// Auto-detect 2-way binding: transform `{this.count}`, `{state.count}`, or `{state['count']}` to `{{get: () => this.count, set: (val) => this.count = val}}`
+										const getter = t.arrowFunctionExpression([], expression)
+										const setter = t.arrowFunctionExpression(
+											[t.identifier('val')],
+											t.assignmentExpression('=', expression, t.identifier('val'))
+										)
+										const bindingObject = t.objectExpression([
+											t.objectProperty(t.identifier('get'), getter),
+											t.objectProperty(t.identifier('set'), setter),
+										])
+										attr.value = t.jsxExpressionContainer(bindingObject)
+									} else {
+										// One-way binding: rewrite `prop={this.counter}` into `prop={() => this.counter}`
+										const arrowFunction = t.arrowFunctionExpression([], expression)
+										attr.value = t.jsxExpressionContainer(arrowFunction)
+									}
 								}
 							}
 						}
