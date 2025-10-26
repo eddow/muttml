@@ -2,12 +2,12 @@
  * Counter Web Component using inline JSX templating
  */
 
+import { computed } from 'mutts/src'
 import { h, PounceComponent } from '..'
-import CounterCSS from './Counter.scss?inline'
 
 // Define the component props interface
 interface MiniCounterComponentProps {
-	count?: number
+	list?: string[]
 }
 
 // Define the events this component can emit
@@ -17,25 +17,26 @@ interface CounterEvents extends Record<string, (...args: any[]) => void> {
 export default class MiniCounterWebComponent extends PounceComponent<CounterEvents, MiniCounterComponentProps> {
 
 	// Getter for 2-way binding support
-	get count() {
-		return this.props.count ?? 0
+	get list() {
+		this.props.list ??= []
+		return this.props.list
 	}
 
 	// Setter for 2-way binding support  
-	set count(value: number) {
-		this.props.count = value
+	set list(value: string[]) {
+		this.props.list = value
 	}
+	addedText: string = Date.now().toString()
 
 	public mount(): void {
 		console.log('🎯 Counter component mounted!', {
-			initialCount: this.count,
 			context: this.context
 		})
 	}
 
 	public unmount(): void {
 		console.log('👋 Counter component unmounted!', {
-			finalCount: this.count
+			finalCount: this.list.length
 		})
 	}
 
@@ -43,30 +44,30 @@ export default class MiniCounterWebComponent extends PounceComponent<CounterEven
 
 		return (
 			<div>
-				<button class="decrement" on:click={() => this.decrement()}>
-					-
-				</button>
-				<div class="input-container">
-
-					<input
-						type="number"
-						id="count-input"
-						class="count-input"
-						value={this.count}
-					/>
+				<div>
+					{
+						computed.map(this.list, (item) => (
+							<div>
+								<input type="text" value={item.value} />
+								<button class="increment" on:click={() => this.list.splice(item.index, 1)}>
+									-
+								</button>
+							</div>
+						))
+					}
 				</div>
-				<button class="increment" on:click={() => this.increment()}>
-					+
-				</button>
+				<div>
+					<input type="text" value={this.addedText} />
+					<button class="increment" on:click={() => this.add()}>
+						+
+					</button>
+				</div>
 			</div>
 		)
 	}
 
-	private increment(): void {
-		this.count = this.count + 1
-	}
-
-	private decrement(): void {
-		this.count = this.count - 1
+	private add(): void {
+		this.list = [...this.list, this.addedText]
+		this.addedText = Date.now().toString()
 	}
 }

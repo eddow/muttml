@@ -3,10 +3,10 @@
  */
 
 import { h } from '.'
-import { reactive } from 'mutts/src'
+import { atomic, reactive } from 'mutts/src'
 import MiniCounterComponent from './components/MiniCounter'
 // Initialize the app
-document.addEventListener('DOMContentLoaded', (): void => {
+document.addEventListener('DOMContentLoaded', atomic(() => {
 	const app = document.getElementById('app')
 	
 	if (!app) {
@@ -15,15 +15,16 @@ document.addEventListener('DOMContentLoaded', (): void => {
 	}
 	
 	const state = reactive({
-		sharedCount: 5,
+		list: [],
 	})
 	// Add components using PascalCase JSX with children
 	const componentsMount = (
 		<div>
+			<div> list: {state.list.join(', ')}</div>
 			<MiniCounterComponent
-				count={state.sharedCount}
+				list={state.list}
 			/>
 		</div>
 	)
 	app.appendChild(componentsMount.mount())
-})
+}))

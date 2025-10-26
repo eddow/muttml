@@ -24,10 +24,14 @@ export type Intermediates = NodeDesc | NodeDesc[]
  * - If already a Node, return as-is
  * - If primitive (string/number), create text node
  */
-function toNode(value: NodeDesc): Node | false {
+function toNode(value: NodeDesc, already?: Node): Node | false {
 	if (!value && typeof value !== 'number') return false
 	if (value instanceof Node) {
 		return unwrap(value)
+	}
+	if (already && already instanceof Text) {
+		already.nodeValue = String(value)
+		return already
 	}
 	return document.createTextNode(String(value))
 }
@@ -44,14 +48,14 @@ function toNode(value: NodeDesc): Node | false {
 export function processChildren(
 	children: Child[],
 	context: Record<PropertyKey, any>
-): Node[] & { stop?: () => void } {
+): Node[] & { cleanup?: () => void } {
 	if (!children || children.length === 0) {
 		return []
 	}
 	function mounted(x: any) {
 		return x && typeof x === 'object' && 'mount' in x ? x.mount(context) : x
 	}
-	const perChild = computed.map(children, (child) => {
+	const perChild = computed.map(children, ({ value: child }) => {
 		return Array.isArray(child)
 			? processChildren(child, context)
 			: typeof child === 'function'
@@ -59,14 +63,15 @@ export function processChildren(
 					child()
 				: child
 	})
-	const mountedChildren = computed.map(perChild, (partial) => {
-		return Array.isArray(partial)
-			? partial.map((p) => toNode(mounted(p)))
-			: toNode(mounted(partial))
-	})
+	const mountedChildren: (Node | false | (Node | false)[])[] & { cleanup?: () => void } =
+		computed.map(perChild, ({ value: partial }, already) => {
+			return Array.isArray(partial)
+				? partial.map((p, i) => toNode(mounted(p), (already as Node[] | undefined)?.[i]))
+				: toNode(mounted(partial), already as Node | undefined)
+		})
 	// Second loop: Flatten the temporary results into final Node[]
 	const result: Node[] = reactive([])
-	const stop = namedEffect('processChildren', () => {
+	const cleanup = namedEffect('processChildren', () => {
 		result.length = 0
 		for (const item of mountedChildren) {
 			if (Array.isArray(item)) {
@@ -76,8 +81,14 @@ export function processChildren(
 			}
 		}
 	})
-	Object.defineProperty(result, 'stop', {
-		value: stop,
+	Object.defineProperty(result, 'cleanup', {
+		value: () => {
+			//* Like for `computed(child) -> doesn't render on add/remove anymore
+			perChild.cleanup?.()
+			mountedChildren.cleanup?.()
+			//*/
+			cleanup()
+		},
 	})
 	return result
 }

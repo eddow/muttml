@@ -3,13 +3,13 @@
  */
 
 import { h } from '.'
-import { reactive } from 'mutts/src'
+import { atomic, reactive } from 'mutts/src'
 import CounterComponent from './components/Counter'
 import TodoComponent from './components/Todo'
 import WrapperComponent from './components/Wrapper'
 
 // Initialize the app
-document.addEventListener('DOMContentLoaded', (): void => {
+document.addEventListener('DOMContentLoaded', atomic((): void => {
 	const app = document.getElementById('app')
 	
 	if (!app) {
@@ -95,4 +95,4 @@ document.addEventListener('DOMContentLoaded', (): void => {
 		</div>
 	)
 	app.appendChild(componentsMount.mount())
-})
+}))

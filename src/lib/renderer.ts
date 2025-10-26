@@ -1,7 +1,7 @@
-import { atomic, computed, effect, reactive, unwrap } from 'mutts/src'
+import { addBatchCleanup, atomic, computed, effect, reactive, unwrap } from 'mutts/src'
 import { PounceElement } from '..'
 import { classNames } from './classNames'
-import { storeCleanupForElement } from './cleanup'
+import { cleanupAllManagedChildren, storeCleanupForElement } from './cleanup'
 import { namedEffect } from './debug'
 import { Child, processChildren } from './processChildren'
 import { getComponent } from './registry'
@@ -32,7 +32,7 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 				// Check for 2-way binding object {get:, set:}
 				if (typeof value === 'object' && value !== null && 'get' in value && 'set' in value) {
 					Object.defineProperty(computedProps, key, {
-						get: () => computed(value.get),
+						get: () => value.get(),
 						set: (newValue) => value.set(newValue),
 						enumerable: true,
 					})
@@ -96,11 +96,6 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 				function describeTemplate() {
 					return instance.template.mount(context)
 				}
-				/*
-				// Call mount lifecycle hook
-				if (typeof instance.mount === 'function') {
-					instance.mount()
-				}*/
 				// Effect for content - only updates content container
 				const contentCleanup = namedEffect('setShadow', () => {
 					const template = computed(describeTemplate)
@@ -193,10 +188,11 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 					const processedChildren = processChildren(children, context)
 
 					// Replace children
-					element.replaceChildren(...unwrap(processedChildren.map(unwrap)))
+					reconcileChildren(element, processedChildren)
+					addBatchCleanup(cleanupAllManagedChildren)
 
 					// Return cleanup function
-					return processedChildren.stop
+					return processedChildren.cleanup
 				}
 			})
 			storeCleanupForElement(element, childrenCleanup)
@@ -210,3 +206,41 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 export const Fragment = (props: { children: Child[] }) => props.children
 // Make h available globally
 ;(globalThis as any).h = h
+
+function reconcileChildren(parent: Node, newChildren: Node[]) {
+	// No need to precompute oldChildren as an array; work with live DOM
+	let newIndex = 0
+
+	// Iterate through newChildren and sync with live DOM
+	while (newIndex < newChildren.length) {
+		const newChild = unwrap(newChildren[newIndex])
+		const oldChild = parent.childNodes[newIndex]
+
+		if (oldChild === newChild) {
+			// Node is already in the correct place → skip
+			newIndex++
+		} else {
+			// Check if newChild exists later in the DOM
+			let found = false
+			for (let i = newIndex + 1; i < parent.childNodes.length; i++) {
+				if (parent.childNodes[i] === newChild) {
+					// Move the node to the correct position
+					parent.insertBefore(newChild, oldChild)
+					found = true
+					break
+				}
+			}
+
+			if (!found) {
+				// Insert new node (or move from outside)
+				parent.insertBefore(newChild, oldChild)
+			}
+			newIndex++
+		}
+	}
+
+	// Remove extra old nodes (now safe because we're using live childNodes)
+	while (parent.childNodes.length > newChildren.length) {
+		parent.removeChild(parent.lastChild!)
+	}
+}

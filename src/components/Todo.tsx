@@ -121,19 +121,19 @@ class TodoWebComponent extends PounceComponent<{}, TodoProps> {
 								}
 							</div>
 						) : (
-							computed.map(this.filteredTodos, todo => (
+							computed.map(this.filteredTodos, (node) => (
 								<div class="todo-item">
-									{console.log('render',todo.text)}
+									{console.log('render',node.value.text)}
 									<input
 										type="checkbox"
-										checked={todo.completed}
+										checked={node.value.completed}
 									/>
-									<span class={['todo-text', { completed: todo.completed }]}>
-										{todo.text}
+									<span class={['todo-text', { completed: node.value.completed }]}>
+										{node.value.text}
 									</span>
 									<button
 										class="delete-button"
-										on:click={() => this.deleteTodo(todo.id)}
+										on:click={() => this.deleteTodo(node.value.id)}
 									>
 										Delete
 									</button>
@@ -230,21 +230,21 @@ class TodoWebComponent extends PounceComponent<{}, TodoProps> {
 
 	@computed
 	private get activeCount(): number {
-		return computed.filter(this.todos, todo => !todo.completed).length
+		return this.todos.filter(todo => !todo.completed).length
 	}
 
 	@computed
 	private get completedCount(): number {
-		return computed.filter(this.todos, todo => todo.completed).length
+		return this.todos.filter(todo => todo.completed).length
 	}
 
 	@computed
 	private get filteredTodos(): Todo[] {
 		switch (this.filter) {
 			case 'active':
-				return computed.filter(this.todos, todo => !todo.completed)
+				return this.todos.filter(todo => !todo.completed)
 			case 'completed':
-				return computed.filter(this.todos, todo => todo.completed)
+				return this.todos.filter(todo => todo.completed)
 			default:
 				return this.todos
 		}

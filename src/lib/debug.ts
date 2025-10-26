@@ -22,18 +22,24 @@ export function defined<T>(value: T | undefined, message = 'Value is defined'): 
 }
 
 export const traces: Record<string, typeof console | undefined> = {}
-
+const counters: number[] = []
 //traces.advertising = console
 const debugMutts = true
 if (debugMutts) {
 	reactiveOptions.chain = (target: Function, caller?: Function) => {
-		console.log(caller ? `${caller.name} -> ${target.name}` : `-> ${target.name}`)
+		console.groupCollapsed(caller ? `${caller.name} -> ${target.name}` : `-> ${target.name}`)
+		if (caller) console.log('caller:', caller)
+		console.log('target:', target)
+		console.groupEnd()
+		counters[0]++
 	}
 	reactiveOptions.beginChain = (target: Function) => {
-		console.groupCollapsed(`${target.name}`)
+		console.groupCollapsed('begin', target)
+		counters.unshift(0)
 	}
 	reactiveOptions.endChain = () => {
 		console.groupEnd()
+		console.log('Effects:', counters.shift())
 	}
 }
 reactiveOptions.maxEffectChain = 100
