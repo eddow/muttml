@@ -1,51 +1,57 @@
-import { Eventful, EventsBase, reactive, unwrap } from 'mutts/src'
+import { computed, reactive } from 'mutts/src'
 
-// Generic type to convert event names to on:eventName props
-export type EventProps<T extends Record<string, (...args: any[]) => void>> = {
-	[K in keyof T as `on:${string & K}`]?: T[K]
+export const attributesSymbol = Symbol('attributes')
+
+type PropsDesc<P extends Record<string, any>> = {
+	[K in keyof P]:
+		| P[K]
+		| (() => P[K])
+		| {
+				get: () => P[K]
+				set: (value: P[K]) => void
+		  }
 }
 
-// Type helper that combines component props with event props
-export type Properties<
-	ComponentProps,
-	Events extends Record<string, (...args: any[]) => void>,
-> = ComponentProps & EventProps<Events>
-
-export abstract class PounceComponent<
-	Events extends EventsBase = EventsBase,
-	Props = Record<string, any>,
-> extends Eventful<Events> {
+abstract class PounceComponentBase<Props extends Record<string, any> = Record<string, any>> {
 	public context: Record<PropertyKey, any> = {}
-	protected readonly props: Properties<Props, Events>
+	public declare [attributesSymbol]: Props
 	constructor(
-		props: Properties<Props, Events>,
+		props: PropsDesc<Props>,
 		protected readonly children: Element[] = [],
 		protected readonly host: PounceElement
 	) {
-		super()
-		this.props = props
 		const that = reactive(this)
 		host.component = that
-
+		for (const [key, value] of Object.entries(props || {})) {
+			if (key !== 'style') {
+				// Check for 2-way binding object {get:, set:}
+				if (typeof value === 'object' && value !== null && 'get' in value && 'set' in value) {
+					Object.defineProperty(this, key, {
+						get: () => computed(value.get),
+						set: (newValue) => value.set(newValue),
+						enumerable: true,
+					})
+				} else if (typeof value === 'function') {
+					// One-way binding
+					Object.defineProperty(this, key, {
+						get: () => computed(value),
+						enumerable: true,
+					})
+				} else {
+					// Static value
+					Object.defineProperty(this, key, {
+						value: value,
+						enumerable: true,
+						writable: false,
+					})
+				}
+			}
+		}
 		// biome-ignore lint/correctness/noConstructorReturn: This is the whole point here
 		return that
 	}
 
-	public on(events: Partial<Events>): void
-	public on<EventType extends keyof Events>(event: EventType, cb: Events[EventType]): () => void
-	public on(...args: any[]): Events[keyof Events] {
-		return super.on.apply(unwrap(this), args as any) as Events[keyof Events]
-	}
-
-	public off(events: Partial<Events>): void
-	public off<EventType extends keyof Events>(event: EventType, cb: Events[EventType]): void
-	public off(...args: any[]): void {
-		super.off.apply(unwrap(this), args as any)
-	}
-
-	public emit<EventType extends keyof Events>(event: EventType, ...args: any[]): void {
-		super.emit.apply(unwrap(this), [event, ...args] as any)
-	}
+	// Event methods are inherited from Eventful base class
 
 	static get style(): string | undefined {
 		return undefined
@@ -73,11 +79,46 @@ export abstract class PounceComponent<
 		// Default implementation - override in subclasses
 	}
 }
+/*
+type AllOptional<T> = {
+	[K in keyof T as undefined extends T[K] ? K : never]-?: T[K]
+}
+
+type AllDefined<T> = {
+	[K in keyof T]-?: T[K]
+}*/
+
+export function PounceComponent<
+	Props extends Record<string, any>,
+	DefaultProps extends Record<string, any>,
+>(defaultProps: (givenProps: Props) => DefaultProps) {
+	type UsedProps = Props & Partial<DefaultProps>
+	abstract class PounceComponent extends PounceComponentBase<UsedProps> {
+		constructor(props: PropsDesc<UsedProps>, children: Element[], host: PounceElement) {
+			super(props, children, host)
+			console.log('New', new.target.name)
+			for (const [name, value] of Object.entries(defaultProps(this as any)))
+				if (!(name in this))
+					Object.defineProperty(this, name, {
+						value: value,
+						enumerable: true,
+						configurable: true,
+						writable: true,
+					})
+		}
+	}
+
+	return PounceComponent as unknown as abstract new (
+		attributes: PropsDesc<UsedProps>,
+		children: Element[],
+		host: PounceElement
+	) => PounceComponentBase<UsedProps> & Props & DefaultProps
+}
 /**
  * Neutral custom element that does nothing but host Shadow DOM
  */
 export class PounceElement extends HTMLElement {
-	component?: PounceComponent<any, any>
+	component?: PounceComponentBase
 	constructor() {
 		super()
 		this.attachShadow({ mode: 'open' })

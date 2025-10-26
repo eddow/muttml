@@ -2,51 +2,36 @@
  * Counter Web Component using inline JSX templating
  */
 
-import { h, PounceComponent } from '..'
+import { PounceComponent } from '..'
 import CounterCSS from './Counter.scss?inline'
 
-// Define the component props interface
-interface CounterComponentProps {
-	count?: number
-	maxValue?: number
-	minValue?: number
-	step?: number
-	disabled?: boolean
-	showSlider?: boolean
-	showInput?: boolean
-	label?: string
-}
-
-// Define the events this component can emit
-interface CounterEvents extends Record<string, (...args: any[]) => void> {
-	countChanged(newCount: number, oldCount: number): void
-	countReset(): void
-	countIncremented(newCount: number): void
-	countDecremented(newCount: number): void
-}
-
-export default class CounterWebComponent extends PounceComponent<CounterEvents, CounterComponentProps> {
-
-	// Getter for 2-way binding support
-	get count() {
-		return this.props.count ?? 0
-	}
-
-	// Setter for 2-way binding support  
-	set count(value: number) {
-		this.props.count = value
-	}
-
+export default class CounterWebComponent extends PounceComponent(
+	(_: {
+		count: number
+		onCountIncremented?: (newCount: number) => void
+		onCountDecremented?: (newCount: number) => void
+		onCountReset?: () => void
+		onCountChanged?: (newCount: number, oldCount: number) => void
+	}) => ({
+		maxValue: 100,
+		minValue: 0,
+		step: 1,
+		disabled: false,
+		showSlider: true,
+		showInput: true,
+		label: 'Counter Component (JSX)',
+	})
+) {
 	public mount(): void {
 		console.log('🎯 Counter component mounted!', {
 			initialCount: this.count,
-			context: this.context
+			context: this.context,
 		})
 	}
 
 	public unmount(): void {
 		console.log('👋 Counter component unmounted!', {
-			finalCount: this.count
+			finalCount: this.count,
 		})
 	}
 
@@ -58,7 +43,7 @@ export default class CounterWebComponent extends PounceComponent<CounterEvents, 
 		const normalizedCount = Math.max(0, Math.min(100, this.count))
 		const red = Math.round(255 * (1 - normalizedCount / 100))
 		const green = Math.round(255 * (normalizedCount / 100))
-		
+
 		return `
 			.counter-text {
 				color: rgb(${red}, ${green}, 0);
@@ -68,25 +53,18 @@ export default class CounterWebComponent extends PounceComponent<CounterEvents, 
 	}
 
 	get template() {
-		const maxValue = ()=> this.props.maxValue ?? 100
-		const minValue = ()=> this.props.minValue ?? 0
-		const step = ()=> this.props.step ?? 1
-		const disabled = ()=> this.props.disabled ?? false
-		const showSlider = ()=> this.props.showSlider ?? true
-		const showInput = ()=> this.props.showInput ?? true
-		const label = ()=> this.props.label ?? 'Counter Component (JSX)'
 
 		return (
 			<div>
 				<div>
-					<h2>{label()}</h2>
+					<h2>{this.label}</h2>
 					<div class="count-display">
 						Count: <span class="counter-text">{this.count}</span>
 					</div>
 					<div class="message">
 						{this.count === 0 ? 'Click the button to increment!' : `Current count: ${this.count}`}
 					</div>
-					{showSlider() && (
+					{this.showSlider && (
 						<div class="slider-container">
 							<label class="slider-label" htmlFor="count-slider">
 								Set Count: {this.count}
@@ -95,15 +73,15 @@ export default class CounterWebComponent extends PounceComponent<CounterEvents, 
 								type="range"
 								id="count-slider"
 								class="slider"
-								min={minValue()}
-								max={maxValue()}
-								step={step()}
+								min={this.minValue}
+								max={this.maxValue}
+								step={this.step}
 								value={this.count}
-								disabled={disabled()}
+								disabled={this.disabled || this.maxValue === this.minValue}
 							/>
 						</div>
 					)}
-					{showInput() && (
+					{this.showInput && (
 						<div class="input-container">
 							<label class="input-label" htmlFor="count-input">
 								Direct Input:
@@ -112,22 +90,22 @@ export default class CounterWebComponent extends PounceComponent<CounterEvents, 
 								type="number"
 								id="count-input"
 								class="count-input"
-								min={minValue()}
-								max={maxValue()}
-								step={step()}
+								min={this.minValue}
+								max={this.maxValue}
+								step={this.step}
 								value={this.count}
-								disabled={disabled()}
+								disabled={this.disabled || this.maxValue === this.minValue}
 							/>
 						</div>
 					)}
 					<div class="controls">
-						<button class="decrement" disabled={disabled()} on:click={() => this.decrement()}>
+						<button class="decrement" disabled={this.disabled || this.count <= this.minValue} onClick={() => this.decrement()}>
 							-
 						</button>
-						<button class="reset" disabled={disabled()} on:click={() => this.reset()}>
+						<button class="reset" disabled={this.disabled || this.count === this.minValue} onClick={() => this.reset()}>
 							Reset
 						</button>
-						<button class="increment" disabled={disabled()} on:click={() => this.increment()}>
+						<button class="increment" disabled={this.disabled || this.count >= this.maxValue} onClick={() => this.increment()}>
 							+
 						</button>
 					</div>
@@ -135,25 +113,24 @@ export default class CounterWebComponent extends PounceComponent<CounterEvents, 
 			</div>
 		)
 	}
-
 	private increment(): void {
 		const oldCount = this.count
 		this.count = this.count + 1
-		this.emit('countIncremented', this.count)
-		this.emit('countChanged', this.count, oldCount)
+		this.onCountIncremented?.(this.count)
+		this.onCountChanged?.(this.count, oldCount)
 	}
 
 	private decrement(): void {
 		const oldCount = this.count
 		this.count = this.count - 1
-		this.emit('countDecremented', this.count)
-		this.emit('countChanged', this.count, oldCount)
+		this.onCountDecremented?.(this.count)
+		this.onCountChanged?.(this.count, oldCount)
 	}
 
 	private reset(): void {
 		const oldCount = this.count
 		this.count = 0
-		this.emit('countReset')
-		this.emit('countChanged', this.count, oldCount)
+		this.onCountReset?.()
+		this.onCountChanged?.(this.count, oldCount)
 	}
 }

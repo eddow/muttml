@@ -1,11 +1,15 @@
+import { attributesSymbol } from '../lib/component'
+
 declare global {
+	// Global h function for JSX
+	const h: any
 	namespace JSX {
 		type Element = { mount(context?: Record<PropertyKey, any>): Node }
 		interface ElementClass {
 			template: any
 		}
 		interface ElementAttributesProperty {
-			props: any
+			[attributesSymbol]: any
 		}
 		interface ElementChildrenAttribute {
 			children: any
@@ -46,21 +50,21 @@ declare global {
 			itemtype?: string
 			role?: string
 			// Common events for all elements
-			'on:click'?: (event: MouseEvent) => void
-			'on:mousedown'?: (event: MouseEvent) => void
-			'on:mouseup'?: (event: MouseEvent) => void
-			'on:mouseover'?: (event: MouseEvent) => void
-			'on:mouseout'?: (event: MouseEvent) => void
-			'on:mouseenter'?: (event: MouseEvent) => void
-			'on:mouseleave'?: (event: MouseEvent) => void
-			'on:mousemove'?: (event: MouseEvent) => void
-			'on:contextmenu'?: (event: MouseEvent) => void
-			'on:dblclick'?: (event: MouseEvent) => void
-			'on:focus'?: (event: FocusEvent) => void
-			'on:blur'?: (event: FocusEvent) => void
-			'on:keydown'?: (event: KeyboardEvent) => void
-			'on:keyup'?: (event: KeyboardEvent) => void
-			'on:keypress'?: (event: KeyboardEvent) => void
+			onClick?: (event: MouseEvent) => void
+			onMousedown?: (event: MouseEvent) => void
+			onMouseup?: (event: MouseEvent) => void
+			onMouseover?: (event: MouseEvent) => void
+			onMouseout?: (event: MouseEvent) => void
+			onMouseenter?: (event: MouseEvent) => void
+			onMouseleave?: (event: MouseEvent) => void
+			onMousemove?: (event: MouseEvent) => void
+			onContextmenu?: (event: MouseEvent) => void
+			onDblclick?: (event: MouseEvent) => void
+			onFocus?: (event: FocusEvent) => void
+			onBlur?: (event: FocusEvent) => void
+			onKeydown?: (event: KeyboardEvent) => void
+			onKeyup?: (event: KeyboardEvent) => void
+			onKeypress?: (event: KeyboardEvent) => void
 		}
 
 		interface IntrinsicElements {
@@ -108,17 +112,17 @@ declare global {
 				minlength?: number
 				checked?: boolean
 				// Events
-				'on:input'?: (event: Event) => void
-				'on:change'?: (event: Event) => void
-				'on:focus'?: (event: FocusEvent) => void
-				'on:blur'?: (event: FocusEvent) => void
-				'on:keydown'?: (event: KeyboardEvent) => void
-				'on:keyup'?: (event: KeyboardEvent) => void
-				'on:keypress'?: (event: KeyboardEvent) => void
-				'on:select'?: (event: Event) => void
-				'on:invalid'?: (event: Event) => void
-				'on:reset'?: (event: Event) => void
-				'on:search'?: (event: Event) => void
+				onInput?: (event: Event) => void
+				onChange?: (event: Event) => void
+				onFocus?: (event: FocusEvent) => void
+				onBlur?: (event: FocusEvent) => void
+				onKeydown?: (event: KeyboardEvent) => void
+				onKeyup?: (event: KeyboardEvent) => void
+				onKeypress?: (event: KeyboardEvent) => void
+				onSelect?: (event: Event) => void
+				onInvalid?: (event: Event) => void
+				onReset?: (event: Event) => void
+				onSearch?: (event: Event) => void
 			}
 
 			textarea: BaseHTMLAttributes & {
@@ -137,15 +141,15 @@ declare global {
 				autocapitalize?: 'off' | 'none' | 'on' | 'sentences' | 'words' | 'characters'
 				spellcheck?: boolean | 'true' | 'false'
 				// Events
-				'on:input'?: (event: Event) => void
-				'on:change'?: (event: Event) => void
-				'on:focus'?: (event: FocusEvent) => void
-				'on:blur'?: (event: FocusEvent) => void
-				'on:keydown'?: (event: KeyboardEvent) => void
-				'on:keyup'?: (event: KeyboardEvent) => void
-				'on:keypress'?: (event: KeyboardEvent) => void
-				'on:select'?: (event: Event) => void
-				'on:invalid'?: (event: Event) => void
+				onInput?: (event: Event) => void
+				onChange?: (event: Event) => void
+				onFocus?: (event: FocusEvent) => void
+				onBlur?: (event: FocusEvent) => void
+				onKeydown?: (event: KeyboardEvent) => void
+				onKeyup?: (event: KeyboardEvent) => void
+				onKeypress?: (event: KeyboardEvent) => void
+				onSelect?: (event: Event) => void
+				onInvalid?: (event: Event) => void
 			}
 
 			select: BaseHTMLAttributes & {
@@ -156,14 +160,14 @@ declare global {
 				size?: number
 				autocomplete?: string
 				// Events
-				'on:change'?: (event: Event) => void
-				'on:focus'?: (event: FocusEvent) => void
-				'on:blur'?: (event: FocusEvent) => void
-				'on:keydown'?: (event: KeyboardEvent) => void
-				'on:keyup'?: (event: KeyboardEvent) => void
-				'on:keypress'?: (event: KeyboardEvent) => void
-				'on:select'?: (event: Event) => void
-				'on:invalid'?: (event: Event) => void
+				onChange?: (event: Event) => void
+				onFocus?: (event: FocusEvent) => void
+				onBlur?: (event: FocusEvent) => void
+				onKeydown?: (event: KeyboardEvent) => void
+				onKeyup?: (event: KeyboardEvent) => void
+				onKeypress?: (event: KeyboardEvent) => void
+				onSelect?: (event: Event) => void
+				onInvalid?: (event: Event) => void
 			}
 
 			button: BaseHTMLAttributes & {
@@ -179,22 +183,22 @@ declare global {
 				name?: string
 				value?: string
 				// Events
-				'on:click'?: (event: MouseEvent) => void
-				'on:mousedown'?: (event: MouseEvent) => void
-				'on:mouseup'?: (event: MouseEvent) => void
-				'on:mouseover'?: (event: MouseEvent) => void
-				'on:mouseout'?: (event: MouseEvent) => void
-				'on:mouseenter'?: (event: MouseEvent) => void
-				'on:mouseleave'?: (event: MouseEvent) => void
-				'on:mousemove'?: (event: MouseEvent) => void
-				'on:contextmenu'?: (event: MouseEvent) => void
-				'on:dblclick'?: (event: MouseEvent) => void
-				'on:focus'?: (event: FocusEvent) => void
-				'on:blur'?: (event: FocusEvent) => void
-				'on:keydown'?: (event: KeyboardEvent) => void
-				'on:keyup'?: (event: KeyboardEvent) => void
-				'on:keypress'?: (event: KeyboardEvent) => void
-				'on:invalid'?: (event: Event) => void
+				onClick?: (event: MouseEvent) => void
+				onMousedown?: (event: MouseEvent) => void
+				onMouseup?: (event: MouseEvent) => void
+				onMouseover?: (event: MouseEvent) => void
+				onMouseout?: (event: MouseEvent) => void
+				onMouseenter?: (event: MouseEvent) => void
+				onMouseleave?: (event: MouseEvent) => void
+				onMousemove?: (event: MouseEvent) => void
+				onContextmenu?: (event: MouseEvent) => void
+				onDblclick?: (event: MouseEvent) => void
+				onFocus?: (event: FocusEvent) => void
+				onBlur?: (event: FocusEvent) => void
+				onKeydown?: (event: KeyboardEvent) => void
+				onKeyup?: (event: KeyboardEvent) => void
+				onKeypress?: (event: KeyboardEvent) => void
+				onInvalid?: (event: Event) => void
 			}
 
 			form: BaseHTMLAttributes & {
@@ -208,25 +212,25 @@ declare global {
 				accept?: string
 				acceptCharset?: string
 				// Events
-				'on:submit'?: (event: SubmitEvent) => void
-				'on:reset'?: (event: Event) => void
-				'on:invalid'?: (event: Event) => void
+				onSubmit?: (event: SubmitEvent) => void
+				onReset?: (event: Event) => void
+				onInvalid?: (event: Event) => void
 			}
 
 			label: BaseHTMLAttributes & {
 				htmlFor?: string
 				form?: string
 				// Events
-				'on:click'?: (event: MouseEvent) => void
-				'on:mousedown'?: (event: MouseEvent) => void
-				'on:mouseup'?: (event: MouseEvent) => void
-				'on:mouseover'?: (event: MouseEvent) => void
-				'on:mouseout'?: (event: MouseEvent) => void
-				'on:mouseenter'?: (event: MouseEvent) => void
-				'on:mouseleave'?: (event: MouseEvent) => void
-				'on:mousemove'?: (event: MouseEvent) => void
-				'on:contextmenu'?: (event: MouseEvent) => void
-				'on:dblclick'?: (event: MouseEvent) => void
+				onClick?: (event: MouseEvent) => void
+				onMousedown?: (event: MouseEvent) => void
+				onMouseup?: (event: MouseEvent) => void
+				onMouseover?: (event: MouseEvent) => void
+				onMouseout?: (event: MouseEvent) => void
+				onMouseenter?: (event: MouseEvent) => void
+				onMouseleave?: (event: MouseEvent) => void
+				onMousemove?: (event: MouseEvent) => void
+				onContextmenu?: (event: MouseEvent) => void
+				onDblclick?: (event: MouseEvent) => void
 			}
 
 			fieldset: BaseHTMLAttributes & {
@@ -234,30 +238,30 @@ declare global {
 				form?: string
 				name?: string
 				// Events
-				'on:click'?: (event: MouseEvent) => void
-				'on:mousedown'?: (event: MouseEvent) => void
-				'on:mouseup'?: (event: MouseEvent) => void
-				'on:mouseover'?: (event: MouseEvent) => void
-				'on:mouseout'?: (event: MouseEvent) => void
-				'on:mouseenter'?: (event: MouseEvent) => void
-				'on:mouseleave'?: (event: MouseEvent) => void
-				'on:mousemove'?: (event: MouseEvent) => void
-				'on:contextmenu'?: (event: MouseEvent) => void
-				'on:dblclick'?: (event: MouseEvent) => void
+				onClick?: (event: MouseEvent) => void
+				onMousedown?: (event: MouseEvent) => void
+				onMouseup?: (event: MouseEvent) => void
+				onMouseover?: (event: MouseEvent) => void
+				onMouseout?: (event: MouseEvent) => void
+				onMouseenter?: (event: MouseEvent) => void
+				onMouseleave?: (event: MouseEvent) => void
+				onMousemove?: (event: MouseEvent) => void
+				onContextmenu?: (event: MouseEvent) => void
+				onDblclick?: (event: MouseEvent) => void
 			}
 
 			legend: BaseHTMLAttributes & {
 				// Events
-				'on:click'?: (event: MouseEvent) => void
-				'on:mousedown'?: (event: MouseEvent) => void
-				'on:mouseup'?: (event: MouseEvent) => void
-				'on:mouseover'?: (event: MouseEvent) => void
-				'on:mouseout'?: (event: MouseEvent) => void
-				'on:mouseenter'?: (event: MouseEvent) => void
-				'on:mouseleave'?: (event: MouseEvent) => void
-				'on:mousemove'?: (event: MouseEvent) => void
-				'on:contextmenu'?: (event: MouseEvent) => void
-				'on:dblclick'?: (event: MouseEvent) => void
+				onClick?: (event: MouseEvent) => void
+				onMousedown?: (event: MouseEvent) => void
+				onMouseup?: (event: MouseEvent) => void
+				onMouseover?: (event: MouseEvent) => void
+				onMouseout?: (event: MouseEvent) => void
+				onMouseenter?: (event: MouseEvent) => void
+				onMouseleave?: (event: MouseEvent) => void
+				onMousemove?: (event: MouseEvent) => void
+				onContextmenu?: (event: MouseEvent) => void
+				onDblclick?: (event: MouseEvent) => void
 			}
 
 			// Media Elements
@@ -272,9 +276,9 @@ declare global {
 				loading?: 'lazy' | 'eager'
 				decoding?: 'sync' | 'async' | 'auto'
 				// Events
-				'on:load'?: (event: Event) => void
-				'on:error'?: (event: Event) => void
-				'on:abort'?: (event: Event) => void
+				onLoad?: (event: Event) => void
+				onError?: (event: Event) => void
+				onAbort?: (event: Event) => void
 			}
 
 			video: BaseHTMLAttributes & {
@@ -290,28 +294,28 @@ declare global {
 				crossorigin?: 'anonymous' | 'use-credentials'
 				playsinline?: boolean
 				// Events
-				'on:loadstart'?: (event: Event) => void
-				'on:loadeddata'?: (event: Event) => void
-				'on:loadedmetadata'?: (event: Event) => void
-				'on:canplay'?: (event: Event) => void
-				'on:canplaythrough'?: (event: Event) => void
-				'on:play'?: (event: Event) => void
-				'on:playing'?: (event: Event) => void
-				'on:pause'?: (event: Event) => void
-				'on:ended'?: (event: Event) => void
-				'on:error'?: (event: Event) => void
-				'on:abort'?: (event: Event) => void
-				'on:emptied'?: (event: Event) => void
-				'on:stalled'?: (event: Event) => void
-				'on:suspend'?: (event: Event) => void
-				'on:waiting'?: (event: Event) => void
-				'on:durationchange'?: (event: Event) => void
-				'on:timeupdate'?: (event: Event) => void
-				'on:progress'?: (event: Event) => void
-				'on:ratechange'?: (event: Event) => void
-				'on:volumechange'?: (event: Event) => void
-				'on:seeked'?: (event: Event) => void
-				'on:seeking'?: (event: Event) => void
+				onLoadstart?: (event: Event) => void
+				onLoadeddata?: (event: Event) => void
+				onLoadedmetadata?: (event: Event) => void
+				onCanplay?: (event: Event) => void
+				onCanplaythrough?: (event: Event) => void
+				onPlay?: (event: Event) => void
+				onPlaying?: (event: Event) => void
+				onPause?: (event: Event) => void
+				onEnded?: (event: Event) => void
+				onError?: (event: Event) => void
+				onAbort?: (event: Event) => void
+				onEmptied?: (event: Event) => void
+				onStalled?: (event: Event) => void
+				onSuspend?: (event: Event) => void
+				onWaiting?: (event: Event) => void
+				onDurationchange?: (event: Event) => void
+				onTimeupdate?: (event: Event) => void
+				onProgress?: (event: Event) => void
+				onRatechange?: (event: Event) => void
+				onVolumechange?: (event: Event) => void
+				onSeeked?: (event: Event) => void
+				onSeeking?: (event: Event) => void
 			}
 
 			audio: BaseHTMLAttributes & {
@@ -323,28 +327,28 @@ declare global {
 				controls?: boolean
 				crossorigin?: 'anonymous' | 'use-credentials'
 				// Events
-				'on:loadstart'?: (event: Event) => void
-				'on:loadeddata'?: (event: Event) => void
-				'on:loadedmetadata'?: (event: Event) => void
-				'on:canplay'?: (event: Event) => void
-				'on:canplaythrough'?: (event: Event) => void
-				'on:play'?: (event: Event) => void
-				'on:playing'?: (event: Event) => void
-				'on:pause'?: (event: Event) => void
-				'on:ended'?: (event: Event) => void
-				'on:error'?: (event: Event) => void
-				'on:abort'?: (event: Event) => void
-				'on:emptied'?: (event: Event) => void
-				'on:stalled'?: (event: Event) => void
-				'on:suspend'?: (event: Event) => void
-				'on:waiting'?: (event: Event) => void
-				'on:durationchange'?: (event: Event) => void
-				'on:timeupdate'?: (event: Event) => void
-				'on:progress'?: (event: Event) => void
-				'on:ratechange'?: (event: Event) => void
-				'on:volumechange'?: (event: Event) => void
-				'on:seeked'?: (event: Event) => void
-				'on:seeking'?: (event: Event) => void
+				onLoadstart?: (event: Event) => void
+				onLoadeddata?: (event: Event) => void
+				onLoadedmetadata?: (event: Event) => void
+				onCanplay?: (event: Event) => void
+				onCanplaythrough?: (event: Event) => void
+				onPlay?: (event: Event) => void
+				onPlaying?: (event: Event) => void
+				onPause?: (event: Event) => void
+				onEnded?: (event: Event) => void
+				onError?: (event: Event) => void
+				onAbort?: (event: Event) => void
+				onEmptied?: (event: Event) => void
+				onStalled?: (event: Event) => void
+				onSuspend?: (event: Event) => void
+				onWaiting?: (event: Event) => void
+				onDurationchange?: (event: Event) => void
+				onTimeupdate?: (event: Event) => void
+				onProgress?: (event: Event) => void
+				onRatechange?: (event: Event) => void
+				onVolumechange?: (event: Event) => void
+				onSeeked?: (event: Event) => void
+				onSeeking?: (event: Event) => void
 			}
 
 			// Interactive Elements
@@ -357,16 +361,16 @@ declare global {
 				type?: string
 				referrerpolicy?: string
 				// Events
-				'on:click'?: (event: MouseEvent) => void
-				'on:mousedown'?: (event: MouseEvent) => void
-				'on:mouseup'?: (event: MouseEvent) => void
-				'on:mouseover'?: (event: MouseEvent) => void
-				'on:mouseout'?: (event: MouseEvent) => void
-				'on:mouseenter'?: (event: MouseEvent) => void
-				'on:mouseleave'?: (event: MouseEvent) => void
-				'on:mousemove'?: (event: MouseEvent) => void
-				'on:contextmenu'?: (event: MouseEvent) => void
-				'on:dblclick'?: (event: MouseEvent) => void
+				onClick?: (event: MouseEvent) => void
+				onMousedown?: (event: MouseEvent) => void
+				onMouseup?: (event: MouseEvent) => void
+				onMouseover?: (event: MouseEvent) => void
+				onMouseout?: (event: MouseEvent) => void
+				onMouseenter?: (event: MouseEvent) => void
+				onMouseleave?: (event: MouseEvent) => void
+				onMousemove?: (event: MouseEvent) => void
+				onContextmenu?: (event: MouseEvent) => void
+				onDblclick?: (event: MouseEvent) => void
 			}
 
 			// Common HTML attributes for all elements
@@ -379,5 +383,3 @@ declare global {
 		}
 	}
 }
-
-export {}

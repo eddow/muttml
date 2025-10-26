@@ -35,30 +35,10 @@ export function babelPluginJsxReactive({
 
 				// Also check props (e.g., `<Component prop={this.counter} />`)
 				if (t.isJSXOpeningElement(path.node.openingElement)) {
-					// Check if this is a component (PascalCase) or DOM element (lowercase)
-					const isComponent =
-						t.isJSXIdentifier(path.node.openingElement.name) &&
-						typeof path.node.openingElement.name.name === 'string' &&
-						/^[A-Z]/.test(path.node.openingElement.name.name)
-
 					for (const attr of path.node.openingElement.attributes) {
 						if (t.isJSXAttribute(attr)) {
-							// Transform on:click to onClick, on:input to onInput, etc.
-							if (
-								attr.name.name &&
-								typeof attr.name.name === 'string' &&
-								attr.name.name.startsWith('on:')
-							) {
-								if (isComponent) {
-									// For components, keep the on: prefix for component events
-									// No transformation needed - the h() function will handle it
-								} else {
-									// For DOM elements, convert to camelCase (e.g., 'click' -> 'onClick')
-									const eventName = attr.name.name.slice(3) // Remove the 'on:'
-									const onEventName = `on${eventName.charAt(0).toUpperCase()}${eventName.slice(1)}`
-									attr.name.name = onEventName
-								}
-							}
+							// Transform onEvent syntax - no transformation needed as we're using onEvent directly
+							// The h() function will handle both component events and DOM events
 
 							// Handle reactive expressions in attributes
 							if (t.isJSXExpressionContainer(attr.value)) {

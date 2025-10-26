@@ -3,7 +3,7 @@
  */
 
 import { computed } from 'mutts/src'
-import { h, PounceComponent, PounceElement } from '..'
+import { PounceComponent } from '..'
 import TodoCSS from './Todo.scss?inline'
 
 interface Todo {
@@ -13,38 +13,29 @@ interface Todo {
 	createdAt: Date
 }
 
-// Define the props interface for type validation
-interface TodoProps {
-	initialTodos?: Todo[]
-	placeholder?: string
-	showFilters?: boolean
-	showClearCompleted?: boolean
-	maxTodos?: number
-	allowEmptyTodos?: boolean
-}
-
-class TodoWebComponent extends PounceComponent<{}, TodoProps> {
-	private todos: Todo[] = []
-	private filter: 'all' | 'active' | 'completed' = 'all'
-	private newTodoText: string = ''
-
-	constructor(props: TodoProps = {}, children: any[] = [], host: PounceElement) {
-		super(props, children, host)
-		// Initialize with provided todos if any
-		if (props.initialTodos) {
-			this.todos = [...props.initialTodos]
-		}
-	}
+export default class TodoWebComponent extends PounceComponent(
+	(_: {
+		placeholder?: string
+		showFilters?: boolean
+		showClearCompleted?: boolean
+		maxTodos?: number
+		allowEmptyTodos?: boolean
+		todos: Todo[]
+	}) => ({
+		filter: 'all' as 'all' | 'active' | 'completed',
+		newTodoText: '',
+	})
+) {
 
 	public mount(): void {
 		console.log('🎯 Todo component mounted!', {
-			context: this.context
+			context: this.context,
 		})
 	}
 
 	public unmount(): void {
 		console.log('👋 Todo component unmounted!', {
-			todoCount: this.todos.length
+			todoCount: this.todos.length,
 		})
 	}
 
@@ -64,15 +55,15 @@ class TodoWebComponent extends PounceComponent<{}, TodoProps> {
 	}
 
 	public get template() {
-		const placeholder = ()=> this.props.placeholder ?? 'Add a new todo...'
-		const showFilters = ()=> this.props.showFilters ?? true
-		const showClearCompleted = ()=> this.props.showClearCompleted ?? true
+		const placeholder = () => this.placeholder ?? 'Add a new todo...'
+		const showFilters = () => this.showFilters ?? true
+		const showClearCompleted = () => this.showClearCompleted ?? true
 
 		return (
 			<div>
 				<div>
 					<h2>Todo Component (JSX)</h2>
-					
+
 					{/* Input section */}
 					<div class="input-section">
 						<input
@@ -80,61 +71,54 @@ class TodoWebComponent extends PounceComponent<{}, TodoProps> {
 							class="todo-input"
 							placeholder={placeholder()}
 							value={this.newTodoText}
-							on:keypress={(e: KeyboardEvent) => e.key === 'Enter' && this.addTodo()}
+							onKeypress={(e: KeyboardEvent) => e.key === 'Enter' && this.addTodo()}
 						/>
-						<button class="add-button" on:click={() => this.addTodo()}>
+						<button class="add-button" onClick={() => this.addTodo()}>
 							Add
 						</button>
 					</div>
-					
+
 					{/* Filter buttons */}
 					{showFilters() && (
 						<div class="filters">
 							<button
 								class={['filter-button', { active: this.filter === 'all' }]}
-								on:click={() => this.setFilter('all')}
+								onClick={() => this.setFilter('all')}
 							>
 								All
 							</button>
 							<button
 								class={['filter-button', { active: this.filter === 'active' }]}
-								on:click={() => this.setFilter('active')}
+								onClick={() => this.setFilter('active')}
 							>
 								Active ({this.activeCount})
 							</button>
 							<button
 								class={['filter-button', { active: this.filter === 'completed' }]}
-								on:click={() => this.setFilter('completed')}
+								onClick={() => this.setFilter('completed')}
 							>
 								Completed ({this.completedCount})
 							</button>
 						</div>
 					)}
-					
+
 					{/* Todo list */}
 					<div class="todo-list">
 						{this.filteredTodos.length === 0 ? (
 							<div class="empty-message">
-								{this.todos.length === 0 
-									? 'No todos yet. Add one above!' 
-									: `No ${this.filter} todos.`
-								}
+								{this.todos.length === 0
+									? 'No todos yet. Add one above!'
+									: `No ${this.filter} todos.`}
 							</div>
 						) : (
 							computed.map(this.filteredTodos, (node) => (
 								<div class="todo-item">
-									{console.log('render',node.value.text)}
-									<input
-										type="checkbox"
-										checked={node.value.completed}
-									/>
+									{console.log('render', node.value.text)}
+									<input type="checkbox" checked={node.value.completed} />
 									<span class={['todo-text', { completed: node.value.completed }]}>
 										{node.value.text}
 									</span>
-									<button
-										class="delete-button"
-										on:click={() => this.deleteTodo(node.value.id)}
-									>
+									<button class="delete-button" onClick={() => this.deleteTodo(node.value.id)}>
 										Delete
 									</button>
 								</div>
@@ -164,7 +148,7 @@ class TodoWebComponent extends PounceComponent<{}, TodoProps> {
 											</span>
 											<button
 												class="delete-button"
-												on:click={() => this.deleteTodo(todo.id)}
+												onClick={() => this.deleteTodo(todo.id)}
 											>
 												Delete
 											</button>
@@ -174,14 +158,11 @@ class TodoWebComponent extends PounceComponent<{}, TodoProps> {
 						}}</case>
 					</div>
 					*/}
-					
+
 					{/* Clear completed section */}
 					{showClearCompleted() && this.completedCount > 0 && (
 						<div class="clear-section">
-							<button
-								class="clear-button"
-								on:click={() => this.clearCompleted()}
-							>
+							<button class="clear-button" onClick={() => this.clearCompleted()}>
 								Clear {this.completedCount} completed
 							</button>
 						</div>
@@ -193,13 +174,13 @@ class TodoWebComponent extends PounceComponent<{}, TodoProps> {
 
 	private addTodo(): void {
 		const text = this.newTodoText.trim()
-		const allowEmptyTodos = this.props.allowEmptyTodos ?? false
-		const maxTodos = this.props.maxTodos
-		
+		const allowEmptyTodos = this.allowEmptyTodos ?? false
+		const maxTodos = this.maxTodos
+
 		// Validate based on typed props
 		if (!text && !allowEmptyTodos) return
 		if (maxTodos && this.todos.length >= maxTodos) return
-		
+
 		let completed = false
 
 		const newTodo: Todo = {
@@ -208,8 +189,10 @@ class TodoWebComponent extends PounceComponent<{}, TodoProps> {
 			get completed() {
 				return completed
 			},
-			set completed(value) { completed = value },
-			createdAt: new Date()
+			set completed(value) {
+				completed = value
+			},
+			createdAt: new Date(),
 		}
 
 		this.todos.push(newTodo)
@@ -217,7 +200,7 @@ class TodoWebComponent extends PounceComponent<{}, TodoProps> {
 	}
 
 	private deleteTodo(id: number): void {
-		this.todos = this.todos.filter(t => t.id !== id)
+		this.todos = this.todos.filter((t) => t.id !== id)
 	}
 
 	private setFilter(filter: 'all' | 'active' | 'completed'): void {
@@ -225,30 +208,28 @@ class TodoWebComponent extends PounceComponent<{}, TodoProps> {
 	}
 
 	private clearCompleted(): void {
-		this.todos = this.todos.filter(todo => !todo.completed)
+		this.todos = this.todos.filter((todo) => !todo.completed)
 	}
 
 	@computed
 	private get activeCount(): number {
-		return this.todos.filter(todo => !todo.completed).length
+		return this.todos.filter((todo) => !todo.completed).length
 	}
 
 	@computed
 	private get completedCount(): number {
-		return this.todos.filter(todo => todo.completed).length
+		return this.todos.filter((todo) => todo.completed).length
 	}
 
 	@computed
 	private get filteredTodos(): Todo[] {
 		switch (this.filter) {
 			case 'active':
-				return this.todos.filter(todo => !todo.completed)
+				return this.todos.filter((todo) => !todo.completed)
 			case 'completed':
-				return this.todos.filter(todo => todo.completed)
+				return this.todos.filter((todo) => todo.completed)
 			default:
 				return this.todos
 		}
 	}
 }
-
-export default TodoWebComponent

@@ -1,4 +1,4 @@
-import { effect, reactiveOptions } from 'mutts/src'
+import { Evolution, effect, reactiveOptions, ScopedCallback } from 'mutts/src'
 
 export function nf<T extends Function>(name: string, fn: T): T {
 	Object.defineProperty(fn, 'name', { value: name })
@@ -23,24 +23,42 @@ export function defined<T>(value: T | undefined, message = 'Value is defined'): 
 
 export const traces: Record<string, typeof console | undefined> = {}
 const counters: number[] = []
-//traces.advertising = console
 const debugMutts = true
 if (debugMutts) {
-	reactiveOptions.chain = (target: Function, caller?: Function) => {
-		console.groupCollapsed(caller ? `${caller.name} -> ${target.name}` : `-> ${target.name}`)
-		if (caller) console.log('caller:', caller)
-		console.log('target:', target)
-		console.groupEnd()
-		counters[0]++
-	}
-	reactiveOptions.beginChain = (target: Function) => {
-		console.groupCollapsed('begin', target)
-		counters.unshift(0)
-	}
-	reactiveOptions.endChain = () => {
-		console.groupEnd()
-		console.log('Effects:', counters.shift())
-	}
+	Object.assign(reactiveOptions, {
+		chain(targets: Function[], caller?: Function) {
+			console.groupCollapsed(
+				caller
+					? `${caller.name} -> ${targets.map((t) => t.name || t.toString()).join(', ')}`
+					: `-> ${targets.map((t) => t.name || t.toString()).join(', ')}`
+			)
+			if (caller) console.log('caller:', caller)
+			console.log('targets:', targets)
+			console.groupEnd()
+			counters[0]++
+		},
+		beginChain(targets: Function[]) {
+			console.groupCollapsed('begin', targets)
+			counters.unshift(0)
+		},
+		endChain() {
+			console.groupEnd()
+			console.log('Effects:', counters.shift())
+		},
+		touched(obj: any, evolution: Evolution, props?: any[], deps?: Set<ScopedCallback>) {
+			console.groupCollapsed('touched', obj, evolution)
+			console.log('props:', props)
+			console.log('deps:', deps)
+			console.groupEnd()
+		},
+		enter(fn: Function) {
+			console.group('enter', fn.name || fn.toString())
+			console.log('effect:', fn)
+		},
+		leave() {
+			console.groupEnd()
+		},
+	})
 }
 reactiveOptions.maxEffectChain = 100
 reactiveOptions.maxEffectReaction = 'debug'

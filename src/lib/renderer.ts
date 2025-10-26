@@ -1,9 +1,8 @@
-import { addBatchCleanup, atomic, computed, effect, reactive, unwrap } from 'mutts/src'
+import { addBatchCleanup, atomic, computed, effect, reactive, untracked, unwrap } from 'mutts/src'
 import { PounceElement } from '..'
 import { classNames } from './classNames'
 import { cleanupAllManagedChildren, storeCleanupForElement } from './cleanup'
 import { namedEffect } from './debug'
-import { Child, processChildren } from './processChildren'
 import { getComponent } from './registry'
 
 /**
@@ -26,47 +25,8 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 		const host = new PounceElement()
 		const shadow = host.shadowRoot!
 
-		const computedProps = reactive<any>({})
-		for (const [key, value] of Object.entries(props || {})) {
-			if (!key.startsWith('on:') && key !== 'style') {
-				// Check for 2-way binding object {get:, set:}
-				if (typeof value === 'object' && value !== null && 'get' in value && 'set' in value) {
-					Object.defineProperty(computedProps, key, {
-						get: () => value.get(),
-						set: (newValue) => value.set(newValue),
-						enumerable: true,
-					})
-				} else if (typeof value === 'function') {
-					// One-way binding
-					Object.defineProperty(computedProps, key, {
-						get: () => computed(value),
-						enumerable: true,
-					})
-				} else {
-					// Static value
-					Object.defineProperty(computedProps, key, {
-						value: value,
-						enumerable: true,
-						writable: false,
-					})
-				}
-			}
-		}
-
 		// Pass props, children, and host to component constructor
-		const instance = new ComponentCtor(computedProps, children, host)
-
-		// Handle component events from props
-		for (const [key, value] of Object.entries(props || {})) {
-			if (key.startsWith('on:')) {
-				const eventName = key.slice(3) // Remove 'on:' prefix
-				// Register the event listener on the component
-				const eventCleanup = namedEffect('eventRegister', () => {
-					return instance.on(eventName as any, atomic(value?.get?.() ?? value()))
-				})
-				storeCleanupForElement(host, eventCleanup)
-			}
-		}
+		const instance = new ComponentCtor(props, children, host)
 
 		// Use adoptedStyleSheets for static styles
 		const staticStyle = (ComponentCtor as any).style
@@ -110,14 +70,18 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 	}
 
 	const element = document.createElement(tag)
-
+	if (tag === 'input') {
+		props.type ??= 'text'
+		if (typeof props.type !== 'string')
+			console.warn('input type must be a constant string', props.type)
+	}
 	// Set properties
 	for (const [key, value] of Object.entries(props || {})) {
 		if (key === 'children') continue // Skip children, we'll handle them separately
 
-		if (key.startsWith('on:')) {
+		if (/^on[A-Z]/.test(key)) {
 			// Event handler
-			const eventType = key.slice(3).toLowerCase()
+			const eventType = key.slice(2).toLowerCase()
 			const eventCleanup = namedEffect(key, () => {
 				const registeredEvent = atomic(value.get?.() ?? value())
 				element.addEventListener(eventType, registeredEvent)
@@ -142,19 +106,26 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 			})
 			storeCleanupForElement(element, propCleanup)
 			if (tag === 'input') {
-				element.addEventListener('input', (e: Event) => {
-					const element = e.target as HTMLInputElement
-					switch (element.type) {
-						case 'checkbox':
-							if (key === 'checked') value.set(element.checked)
-							break
-						case 'number':
-							if (key === 'value') value.set(Number(element.value))
-							break
-						default:
-							if (key === 'value') value.set(element.value)
-					}
-				})
+				switch (element.type) {
+					case 'checkbox':
+						if (key === 'checked')
+							element.addEventListener('input', () => {
+								value.set(element.checked)
+							})
+						break
+					case 'number':
+						if (key === 'value')
+							element.addEventListener('input', () => {
+								value.set(Number(element.value))
+							})
+						break
+					default:
+						if (key === 'value')
+							element.addEventListener('input', () => {
+								value.set(element.value)
+							})
+						break
+				}
 			}
 		} else if (typeof value === 'function') {
 			// Reactive prop (e.g., `prop={() => this.counter}`)
@@ -179,20 +150,24 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 			function mounted(x: any) {
 				return x && typeof x === 'object' && 'mount' in x ? x.mount(context) : x
 			}
-			children = Array.isArray(children) ? children.map(mounted) : mounted(children)
+			const mountedChildren = Array.isArray(children) ? children.map(mounted) : mounted(children)
 			// Enhanced children management with better array and .map() support
 			const childrenCleanup = effect(function mountChildren() {
 				// Render children
-				if (children && !props?.innerHTML) {
+				if (mountedChildren && !props?.innerHTML) {
 					// Process new children
-					const processedChildren = processChildren(children, context)
-
-					// Replace children
-					reconcileChildren(element, processedChildren)
-					addBatchCleanup(cleanupAllManagedChildren)
+					const processedChildren = processChildren(mountedChildren, context)
+					const redrawCleanup = namedEffect('redraw', () => {
+						// Replace children
+						reconcileChildren(element, processedChildren)
+						addBatchCleanup(cleanupAllManagedChildren)
+					})
 
 					// Return cleanup function
-					return processedChildren.cleanup
+					return () => {
+						processedChildren.cleanup?.()
+						redrawCleanup()
+					}
 				}
 			})
 			storeCleanupForElement(element, childrenCleanup)
@@ -208,6 +183,7 @@ export const Fragment = (props: { children: Child[] }) => props.children
 ;(globalThis as any).h = h
 
 function reconcileChildren(parent: Node, newChildren: Node[]) {
+	console.log('reconcileChildren', parent, newChildren)
 	// No need to precompute oldChildren as an array; work with live DOM
 	let newIndex = 0
 
@@ -243,4 +219,97 @@ function reconcileChildren(parent: Node, newChildren: Node[]) {
 	while (parent.childNodes.length > newChildren.length) {
 		parent.removeChild(parent.lastChild!)
 	}
+}
+
+/**
+ * Node descriptor - what a function can return
+ */
+export type NodeDesc = Node | string | number
+
+/**
+ * A child can be:
+ * - A DOM node
+ * - A reactive function that returns intermediate values
+ * - An array of children (from .map() operations)
+ */
+export type Child = NodeDesc | (() => Intermediates) | Child[]
+
+/**
+ * Intermediate values - what functions return before final processing
+ */
+export type Intermediates = NodeDesc | NodeDesc[]
+
+/**
+ * Convert a value to a DOM Node
+ * - If already a Node, return as-is
+ * - If primitive (string/number), create text node
+ */
+function toNode(value: NodeDesc, already?: Node): Node | false {
+	if (!value && typeof value !== 'number') return false
+	if (value instanceof Node) {
+		return unwrap(value)
+	}
+	if (already && already instanceof Text) {
+		already.nodeValue = String(value)
+		return already
+	}
+	return document.createTextNode(String(value))
+}
+
+/**
+ * Process children arrays, handling various child types including:
+ * - Direct nodes
+ * - Reactive functions
+ * - Arrays of children
+ * - Variable arrays from .map() operations
+ *
+ * Returns a flat array of DOM nodes suitable for replaceChildren()
+ */
+export function processChildren(
+	children: Child[],
+	context: Record<PropertyKey, any>
+): Node[] & { cleanup?: () => void } {
+	if (!children || children.length === 0) {
+		return []
+	}
+	function mounted(x: any) {
+		return x && typeof x === 'object' && 'mount' in x ? x.mount(context) : x
+	}
+	return untracked(() => {
+		const perChild = computed.map(children, ({ value: child }) =>
+			typeof child === 'function' ? computed(child) : child
+		)
+		const mountedChildren: (Node | false | (Node | false)[])[] & { cleanup?: () => void } =
+			computed.map(perChild, ({ value: partial }, already) =>
+				Array.isArray(partial)
+					? processChildren(partial, context)
+					: toNode(mounted(partial), already as Node | undefined)
+			)
+		// Second loop: Flatten the temporary results into final Node[]
+		const flattened: Node[] = reactive([])
+		const cleanup = namedEffect('processChildren', () => {
+			flattened.length = 0
+			for (const item of mountedChildren) {
+				if (Array.isArray(item)) {
+					flattened.push(...(item.filter(Boolean) as Node[]))
+				} else if (item) {
+					flattened.push(item)
+				}
+			}
+		})
+		Object.defineProperty(flattened, 'cleanup', {
+			value: () => {
+				//* Like for `computed(child) -> doesn't render on add/remove anymore
+				perChild.cleanup?.()
+				for (const item of mountedChildren) {
+					if (typeof item === 'object' && 'cleanup' in item && typeof item.cleanup === 'function')
+						item.cleanup?.()
+				}
+				mountedChildren.cleanup?.()
+				//*/
+				cleanup()
+			},
+		})
+		return flattened
+	})
 }
