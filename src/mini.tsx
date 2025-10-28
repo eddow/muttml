@@ -21,11 +21,8 @@ document.addEventListener(
 		})
 		// Add components using PascalCase JSX with children
 		const componentsMount = (
-			<div>
-				<div> list: {state.list.join(', ')}</div>
-				<MiniCounterComponent list={state.list} />
-			</div>
+			<MiniCounterComponent list={state.list} />
 		)
-		app.appendChild(componentsMount.mount())
+		app.appendChild(componentsMount.render())
 	})
 )

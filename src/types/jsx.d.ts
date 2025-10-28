@@ -4,7 +4,7 @@ declare global {
 	// Global h function for JSX
 	const h: any
 	namespace JSX {
-		type Element = { mount(context?: Record<PropertyKey, any>): Node }
+		type Element = { render(context?: Record<PropertyKey, any>): Node }
 		interface ElementClass {
 			template: any
 		}

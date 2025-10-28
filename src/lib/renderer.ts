@@ -1,4 +1,4 @@
-import { addBatchCleanup, atomic, computed, effect, reactive, untracked, unwrap } from 'mutts/src'
+import { addBatchCleanup, atomic, computed, effect, reactive, unwrap } from 'mutts/src'
 import { PounceElement } from '..'
 import { classNames } from './classNames'
 import { cleanupAllManagedChildren, storeCleanupForElement } from './cleanup'
@@ -37,7 +37,7 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 		}
 
 		// Effect for styles - only updates style container
-		const styleCleanup = namedEffect('style', () => {
+		const styleCleanup = effect(function style() {
 			const instStyle = instance.style as string | undefined
 
 			// Use adoptedStyleSheets for instance styles
@@ -49,15 +49,15 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 		})
 		storeCleanupForElement(host, styleCleanup)
 		return {
-			mount(context: Record<PropertyKey, any> = {}) {
+			render(context: Record<PropertyKey, any> = {}) {
 				// Set context on the component instance
 				instance.context = context = Object.create(context)
 
 				function describeTemplate() {
-					return instance.template.mount(context)
+					return instance.template.render(context)
 				}
 				// Effect for content - only updates content container
-				const contentCleanup = namedEffect('setShadow', () => {
+				const contentCleanup = effect(function setShadow() {
 					const template = computed(describeTemplate)
 					// template is already a DOM element from h()
 					shadow.replaceChildren(unwrap(template))
@@ -69,7 +69,7 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 		}
 	}
 
-	const element = document.createElement(tag)
+	const element = document.createElement(tag === 'debug' ? 'div' : tag)
 	if (tag === 'input') {
 		props.type ??= 'text'
 		if (typeof props.type !== 'string')
@@ -82,7 +82,7 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 		if (/^on[A-Z]/.test(key)) {
 			// Event handler
 			const eventType = key.slice(2).toLowerCase()
-			const eventCleanup = namedEffect(key, () => {
+			const eventCleanup = namedEffect(`event:${key}`, () => {
 				const registeredEvent = atomic(value.get?.() ?? value())
 				element.addEventListener(eventType, registeredEvent)
 				return () => element.removeEventListener(eventType, registeredEvent)
@@ -91,7 +91,7 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 		} else if (key === 'class') {
 			if (typeof value === 'function') {
 				// Reactive class (e.g., `class={() => ['btn', { active: this.isActive }]}`)
-				const classCleanup = namedEffect('className', () => {
+				const classCleanup = effect(function className() {
 					element.className = classNames(value())
 				})
 				storeCleanupForElement(element, classCleanup)
@@ -146,30 +146,20 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 
 	// Create plain HTML element - also return mount object for consistency
 	return {
-		mount(context: Record<PropertyKey, any> = {}) {
-			function mounted(x: any) {
-				return x && typeof x === 'object' && 'mount' in x ? x.mount(context) : x
-			}
-			const mountedChildren = Array.isArray(children) ? children.map(mounted) : mounted(children)
-			// Enhanced children management with better array and .map() support
+		render(context: Record<PropertyKey, any> = {}) {
 			const childrenCleanup = effect(function mountChildren() {
 				// Render children
-				if (mountedChildren && !props?.innerHTML) {
+				if (children && children.length > 0 && !props?.innerHTML) {
 					// Process new children
-					const processedChildren = processChildren(mountedChildren, context)
-					const redrawCleanup = namedEffect('redraw', () => {
+					const processedChildren = processChildren(children, context)
+					effect(function redraw() {
 						// Replace children
 						reconcileChildren(element, processedChildren)
 						addBatchCleanup(cleanupAllManagedChildren)
 					})
-
-					// Return cleanup function
-					return () => {
-						processedChildren.cleanup?.()
-						redrawCleanup()
-					}
 				}
 			})
+			// TODO: Should not be necessary, if/as long as cleanups are stored correctly AND avoid GC cleanup
 			storeCleanupForElement(element, childrenCleanup)
 
 			return element
@@ -183,7 +173,7 @@ export const Fragment = (props: { children: Child[] }) => props.children
 ;(globalThis as any).h = h
 
 function reconcileChildren(parent: Node, newChildren: Node[]) {
-	console.log('reconcileChildren', parent, newChildren)
+	console.log('%creconcileChildren', 'color: red; font-weight: bold;', parent, newChildren)
 	// No need to precompute oldChildren as an array; work with live DOM
 	let newIndex = 0
 
@@ -232,7 +222,7 @@ export type NodeDesc = Node | string | number
  * - A reactive function that returns intermediate values
  * - An array of children (from .map() operations)
  */
-export type Child = NodeDesc | (() => Intermediates) | Child[]
+export type Child = NodeDesc | (() => Intermediates) // | Child[]
 
 /**
  * Intermediate values - what functions return before final processing
@@ -265,51 +255,27 @@ function toNode(value: NodeDesc, already?: Node): Node | false {
  *
  * Returns a flat array of DOM nodes suitable for replaceChildren()
  */
-export function processChildren(
-	children: Child[],
-	context: Record<PropertyKey, any>
-): Node[] & { cleanup?: () => void } {
-	if (!children || children.length === 0) {
-		return []
+export function processChildren(children: Child[], context: Record<PropertyKey, any>): Node[] {
+	function rendered(x: any) {
+		return x && typeof x === 'object' && 'render' in x ? x.render(context) : x
 	}
-	function mounted(x: any) {
-		return x && typeof x === 'object' && 'mount' in x ? x.mount(context) : x
-	}
-	return untracked(() => {
-		const perChild = computed.map(children, ({ value: child }) =>
-			typeof child === 'function' ? computed(child) : child
-		)
-		const mountedChildren: (Node | false | (Node | false)[])[] & { cleanup?: () => void } =
-			computed.map(perChild, ({ value: partial }, already) =>
-				Array.isArray(partial)
-					? processChildren(partial, context)
-					: toNode(mounted(partial), already as Node | undefined)
-			)
-		// Second loop: Flatten the temporary results into final Node[]
-		const flattened: Node[] = reactive([])
-		const cleanup = namedEffect('processChildren', () => {
-			flattened.length = 0
-			for (const item of mountedChildren) {
-				if (Array.isArray(item)) {
-					flattened.push(...(item.filter(Boolean) as Node[]))
-				} else if (item) {
-					flattened.push(item)
-				}
+	const perChild = computed.memo(children, (child) =>
+		typeof child === 'function' ? child() : child
+	)
+	const mountedChildren: (Node | false | (Node | false)[])[] = computed.memo(perChild, (partial) =>
+		Array.isArray(partial) ? processChildren(partial, context) : toNode(rendered(partial))
+	)
+	// Second loop: Flatten the temporary results into final Node[]
+	const flattened: Node[] = reactive([])
+	effect(function flattenChildren() {
+		flattened.length = 0
+		for (const item of mountedChildren) {
+			if (Array.isArray(item)) {
+				flattened.push(...(item.filter(Boolean) as Node[]))
+			} else if (item) {
+				flattened.push(item)
 			}
-		})
-		Object.defineProperty(flattened, 'cleanup', {
-			value: () => {
-				//* Like for `computed(child) -> doesn't render on add/remove anymore
-				perChild.cleanup?.()
-				for (const item of mountedChildren) {
-					if (typeof item === 'object' && 'cleanup' in item && typeof item.cleanup === 'function')
-						item.cleanup?.()
-				}
-				mountedChildren.cleanup?.()
-				//*/
-				cleanup()
-			},
-		})
-		return flattened
+		}
 	})
+	return flattened
 }

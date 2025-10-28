@@ -61,7 +61,7 @@ document.addEventListener(
 			</div>
 		)
 
-		app.appendChild(introElementMount.mount())
+		app.appendChild(introElementMount.render())
 		const todos = reactive([])
 		// Add components using PascalCase JSX with children
 		const componentsMount = (
@@ -98,6 +98,6 @@ document.addEventListener(
 				</WrapperComponent>
 			</div>
 		)
-		app.appendChild(componentsMount.mount())
+		app.appendChild(componentsMount.render())
 	})
 )

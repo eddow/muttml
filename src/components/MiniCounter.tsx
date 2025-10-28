@@ -23,16 +23,13 @@ export default class MiniCounterWebComponent extends PounceComponent((_: { list:
 	get template() {
 		return (
 			<div>
-				<div>
-					{computed.map(this.list, (item) => (
-						<div>
-							<input type="text" value={item.value} />
-							<button class="remove" onClick={() => this.list.splice(item.index, 1)}>
-								-
-							</button>
-						</div>
-					))}
-				</div>
+				<debug>
+				{computed.map(this.list, (value, index) => (
+					<button class="remove" onClick={() => this.list.splice(index, 1)}>
+						{value}
+					</button>
+				))}
+				</debug>
 				<div>
 					<input type="text" value={this.addedText} />
 					<button class="add" onClick={() => this.add()}>
