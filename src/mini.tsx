@@ -2,16 +2,19 @@
  * Main entry point for Pounce-TS application
  */
 
-import { computed, effect, reactive } from 'mutts/src'
-import { reconcileChildren } from './lib/renderer'
+import { computed, effect, reactive, trackEffect } from 'mutts/src'
+import { bindChildren } from './lib/renderer'
 import { defaulted } from './lib/utils'
 
 function MiniCounter(
 	props: { list?: string[]; addedText?: string },
-	context: Record<PropertyKey, any>
+	scope: Record<PropertyKey, any>
 ) {
+	trackEffect((obj, evolution) => {
+		console.log(obj, evolution)
+	})
 	const state = defaulted(props, { list: [] as string[], addedText: Date.now().toString() })
-	console.log('🎯 Counter component mounted!', { context: context })
+	console.log('🎯 Counter component mounted!', { scope: scope })
 	effect(() => {
 		return () => {
 			console.log('🎯 Counter component unmounted!', { finalList: state.list.join(', ') })
@@ -20,6 +23,9 @@ function MiniCounter(
 	function add() {
 		state.list.push(state.addedText)
 		state.addedText = Date.now().toString()
+	}
+	function removeAll() {
+		state.list.length = 0
 	}
 	return (
 		<>
@@ -36,6 +42,9 @@ function MiniCounter(
 					+
 				</button>
 			</div>
+			<button if={state.list.length > 0} class="remove-all" onClick={removeAll}>
+				Remove All
+			</button>
 		</>
 	)
 }
@@ -55,11 +64,11 @@ const app = (
 
 // Initialize the app
 document.addEventListener('DOMContentLoaded', () => {
-	const appElement = document.getElementById('app')
+	const appElement = document.getElementById('mini')
 
 	if (!appElement) {
 		console.error('App container not found')
 		return
 	}
-	reconcileChildren(appElement, app)
+	bindChildren(appElement, app)
 })

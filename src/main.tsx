@@ -6,7 +6,7 @@ import { reactive } from 'mutts/src'
 import CounterComponent from './components/Counter'
 import TodoComponent from './components/Todo'
 import WrapperComponent from './components/Wrapper'
-import { reconcileChildren } from './lib/renderer'
+import { bindChildren } from './lib/renderer'
 
 // Create a reactive state for 2-way binding demo
 const state = reactive({
@@ -16,7 +16,6 @@ const state = reactive({
 
 // biome-ignore lint/style/useConst: set in the props
 let todos = reactive([])
-
 // Build the app virtual tree and render to a DocumentFragment
 const app = (
 	<>
@@ -96,5 +95,5 @@ document.addEventListener('DOMContentLoaded', () => {
 		console.error('App container not found')
 		return
 	}
-	reconcileChildren(appElement, app)
+	bindChildren(appElement, app)
 })

@@ -2,7 +2,7 @@
  * Counter Web Component using inline JSX templating (functional standard)
  */
 
-import { effect } from 'mutts/src'
+import { effect, trackEffect, watch } from 'mutts/src'
 import './Counter.scss'
 import { defaulted } from '../lib/utils'
 
@@ -21,8 +21,11 @@ export default function CounterWebComponent(
 		showInput?: boolean
 		label?: string
 	},
-	context: Record<PropertyKey, any>
+	scope: Record<PropertyKey, any>
 ) {
+	trackEffect((obj, evolution) => {
+		console.log(obj, evolution)
+	})
 	const state = defaulted(props, {
 		maxValue: 100,
 		minValue: 0,
@@ -34,34 +37,28 @@ export default function CounterWebComponent(
 	})
 
 	console.log('🎯 Counter component mounted!', {
-		initialCount: state.count,
-		context,
+		scope,
 	})
 	effect(() => {
 		return () => {
 			console.log('👋 Counter component unmounted!', { finalCount: state.count })
 		}
 	})
+	watch(()=> state.count, (v, o)=> state.onCountChanged?.(v, o!))
 
 	function increment() {
-		const oldCount = state.count
 		state.count = state.count + 1
 		state.onCountIncremented?.(state.count)
-		state.onCountChanged?.(state.count, oldCount)
 	}
 
 	function decrement() {
-		const oldCount = state.count
 		state.count = state.count - 1
 		state.onCountDecremented?.(state.count)
-		state.onCountChanged?.(state.count, oldCount)
 	}
 
 	function reset() {
-		const oldCount = state.count
 		state.count = 0
 		state.onCountReset?.()
-		state.onCountChanged?.(state.count, oldCount)
 	}
 
 	const counterTextStyle = () => {
@@ -92,6 +89,7 @@ export default function CounterWebComponent(
 					max={state.maxValue}
 					step={state.step}
 					value={state.count}
+					update:value={(v) => {state.count = Number(v)}}
 					disabled={state.disabled || state.maxValue === state.minValue}
 				/>
 			</div>

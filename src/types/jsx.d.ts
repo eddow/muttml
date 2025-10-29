@@ -4,21 +4,57 @@ declare global {
 	// Global h function for JSX
 	const h: any
 	const Fragment: any
+	const Scope: (
+		props: { children?: any; [key: string]: any },
+		scope: Record<PropertyKey, any>
+	) => JSX.Element
 	type ComponentFunction = (
 		props: any,
-		context: Record<PropertyKey, any>
+		scope: Record<PropertyKey, any>
 	) => JSX.Element | JSX.Element[]
 	namespace JSX {
-		type Element = { render(context?: Record<PropertyKey, any>): Node[] }
+		type Element = { render(scope?: Record<PropertyKey, any>): Node[] }
 		interface ElementClass {
 			template: any
 		}
 		interface ElementAttributesProperty {
+			//TODO: This symbol does not exist anymore but the include of the nonexisting file is needed
 			[attributesSymbol]: any
 		}
 		interface ElementChildrenAttribute {
 			children: any
 		}
+
+		// Scope-aware directive typings (if/strict/else/when)
+		// Consumers can augment this interface to provide strong types per scope name.
+		// The '_' key represents the default scope used by bare directives like `if={(v)=>...}`.
+		interface JSXScopeTypes {
+			_: any
+			[name: string]: any
+		}
+
+		type DirectivePrefix = 'if' | 'strict' | 'else' | 'when'
+
+		type DirectivePredicate<Value> = (value: Value) => boolean
+
+		type DirectiveValue<Value> = boolean | DirectivePredicate<Value>
+
+		// Default-scope directives: support both bare (e.g. `if`) and explicit `:*_` (e.g. `if:_`).
+		type DefaultDirectiveProps = {
+			[K in DirectivePrefix]?: DirectiveValue<JSXScopeTypes['_']>
+		} & {
+			[K in `${DirectivePrefix}:_`]?: DirectiveValue<JSXScopeTypes['_']>
+		}
+
+		// Named-scope directives for a single scope name.
+		type NamedDirectivePropsForScope<ScopeName extends keyof JSXScopeTypes & string> = {
+			[K in `${DirectivePrefix}:${ScopeName}`]?: DirectiveValue<JSXScopeTypes[ScopeName]>
+		}
+
+		// All named-scope directives combined.
+		type AllNamedDirectiveProps = {
+			[SN in keyof JSXScopeTypes & string]: NamedDirectivePropsForScope<SN>
+		}[keyof JSXScopeTypes & string]
 		// Override the default JSX children handling
 		interface IntrinsicAttributes {
 			children?: any
@@ -28,49 +64,51 @@ declare global {
 		type ClassValue = string | ClassValue[] | Record<string, boolean> | null | undefined
 
 		// Base interface for common HTML attributes
-		type BaseHTMLAttributes = IntrinsicAttributes & {
-			// Global attributes
-			id?: string
-			class?: ClassValue
-			style?: string | Record<string, string | number>
-			title?: string
-			lang?: string
-			dir?: 'ltr' | 'rtl' | 'auto'
-			hidden?: boolean
-			tabindex?: number
-			accesskey?: string
-			contenteditable?: boolean | 'true' | 'false' | 'inherit'
-			spellcheck?: boolean | 'true' | 'false'
-			translate?: 'yes' | 'no'
-			autocapitalize?: 'off' | 'none' | 'on' | 'sentences' | 'words' | 'characters'
-			autocorrect?: 'on' | 'off'
-			autocomplete?: string
-			enterkeyhint?: 'enter' | 'done' | 'go' | 'next' | 'previous' | 'search' | 'send'
-			inputmode?: 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search'
-			is?: string
-			itemid?: string
-			itemprop?: string
-			itemref?: string
-			itemscope?: boolean
-			itemtype?: string
-			role?: string
-			// Common events for all elements
-			onClick?: (event: MouseEvent) => void
-			onMousedown?: (event: MouseEvent) => void
-			onMouseup?: (event: MouseEvent) => void
-			onMouseover?: (event: MouseEvent) => void
-			onMouseout?: (event: MouseEvent) => void
-			onMouseenter?: (event: MouseEvent) => void
-			onMouseleave?: (event: MouseEvent) => void
-			onMousemove?: (event: MouseEvent) => void
-			onContextmenu?: (event: MouseEvent) => void
-			onDblclick?: (event: MouseEvent) => void
-			onFocus?: (event: FocusEvent) => void
-			onBlur?: (event: FocusEvent) => void
-			onKeydown?: (event: KeyboardEvent) => void
-			onKeyup?: (event: KeyboardEvent) => void
-			onKeypress?: (event: KeyboardEvent) => void
-		}
+		type BaseHTMLAttributes = IntrinsicAttributes &
+			DefaultDirectiveProps &
+			AllNamedDirectiveProps & {
+				// Global attributes
+				id?: string
+				class?: ClassValue
+				style?: string | Record<string, string | number>
+				title?: string
+				lang?: string
+				dir?: 'ltr' | 'rtl' | 'auto'
+				hidden?: boolean
+				tabindex?: number
+				accesskey?: string
+				contenteditable?: boolean | 'true' | 'false' | 'inherit'
+				spellcheck?: boolean | 'true' | 'false'
+				translate?: 'yes' | 'no'
+				autocapitalize?: 'off' | 'none' | 'on' | 'sentences' | 'words' | 'characters'
+				autocorrect?: 'on' | 'off'
+				autocomplete?: string
+				enterkeyhint?: 'enter' | 'done' | 'go' | 'next' | 'previous' | 'search' | 'send'
+				inputmode?: 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search'
+				is?: string
+				itemid?: string
+				itemprop?: string
+				itemref?: string
+				itemscope?: boolean
+				itemtype?: string
+				role?: string
+				// Common events for all elements
+				onClick?: (event: MouseEvent) => void
+				onMousedown?: (event: MouseEvent) => void
+				onMouseup?: (event: MouseEvent) => void
+				onMouseover?: (event: MouseEvent) => void
+				onMouseout?: (event: MouseEvent) => void
+				onMouseenter?: (event: MouseEvent) => void
+				onMouseleave?: (event: MouseEvent) => void
+				onMousemove?: (event: MouseEvent) => void
+				onContextmenu?: (event: MouseEvent) => void
+				onDblclick?: (event: MouseEvent) => void
+				onFocus?: (event: FocusEvent) => void
+				onBlur?: (event: FocusEvent) => void
+				onKeydown?: (event: KeyboardEvent) => void
+				onKeyup?: (event: KeyboardEvent) => void
+				onKeypress?: (event: KeyboardEvent) => void
+			}
 
 		interface IntrinsicElements {
 			for: {
@@ -102,6 +140,9 @@ declare global {
 					| 'button'
 					| 'range'
 				value?: any
+				checked?: boolean
+				'update:checked'?: (value: boolean) => void
+				'update:value'?: (value: any) => void
 				placeholder?: string
 				disabled?: boolean
 				required?: boolean
@@ -119,7 +160,6 @@ declare global {
 				pattern?: string
 				maxlength?: number
 				minlength?: number
-				checked?: boolean
 				// Events
 				onInput?: (event: Event) => void
 				onChange?: (event: Event) => void

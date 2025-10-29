@@ -2,9 +2,10 @@
  * Todo Web Component using inline JSX templating
  */
 
-import { computed, effect } from 'mutts/src'
+import { computed, effect, trackEffect } from 'mutts/src'
 import './Todo.scss'
 import { array, compute, defaulted } from '../lib/utils'
+import { Scope } from './controlFlow'
 
 interface Todo {
 	id: number
@@ -13,16 +14,22 @@ interface Todo {
 	createdAt: Date
 }
 
-export default function TodoWebComponent(props: {
-	placeholder?: string
-	showFilters?: boolean
-	showClearCompleted?: boolean
-	maxTodos?: number
-	allowEmptyTodos?: boolean
-	todos: Todo[]
-	filter?: 'all' | 'active' | 'completed'
-	newTodoText?: string
-}, context: Record<PropertyKey, any>) {
+export default function TodoWebComponent(
+	props: {
+		placeholder?: string
+		showFilters?: boolean
+		showClearCompleted?: boolean
+		maxTodos?: number
+		allowEmptyTodos?: boolean
+		todos: Todo[]
+		filter?: 'all' | 'active' | 'completed'
+		newTodoText?: string
+	},
+	scope: Record<PropertyKey, any>
+) {
+	trackEffect((obj, evolution) => {
+		console.log(obj, evolution)
+	})
 	const state = defaulted(props, {
 		placeholder: 'Add a new todo...',
 		showFilters: true,
@@ -31,7 +38,7 @@ export default function TodoWebComponent(props: {
 		newTodoText: '',
 	})
 
-	console.log('🎯 Todo component mounted!', { context })
+	console.log('🎯 Todo component mounted!', { scope })
 	effect(() => {
 		return () => {
 			console.log('👋 Todo component unmounted!', { todoCount: state.todos.length })
@@ -71,12 +78,12 @@ export default function TodoWebComponent(props: {
 
 	const filteredTodos = compute(() => {
 		switch (state.filter) {
-		case 'active':
-			return state.todos.filter((todo) => !todo.completed)
-		case 'completed':
-			return state.todos.filter((todo) => todo.completed)
-		default:
-			return state.todos
+			case 'active':
+				return state.todos.filter((todo) => !todo.completed)
+			case 'completed':
+				return state.todos.filter((todo) => todo.completed)
+			default:
+				return state.todos
 		}
 	})
 	function setFilter(filter: 'all' | 'active' | 'completed') {
@@ -101,34 +108,34 @@ export default function TodoWebComponent(props: {
 			</div>
 
 			{/* Filter buttons */}
-			{state.showFilters && (
-				<div class="filters">
-					<button
-						class={['filter-button', { active: state.filter === 'all' }]}
-						onClick={() => setFilter('all')}
-					>
-						All
-					</button>
-					<button
-						class={['filter-button', { active: state.filter === 'active' }]}
-						onClick={() => setFilter('active')}
-					>
-						Active ({activeCount()})
-					</button>
-					<button
-						class={['filter-button', { active: state.filter === 'completed' }]}
-						onClick={() => setFilter('completed')}
-					>
-						Completed ({completedCount()})
-					</button>
-				</div>
-			)}
+			<div if={state.showFilters} class="filters">
+				<button
+					class={['filter-button', { active: state.filter === 'all' }]}
+					onClick={() => setFilter('all')}
+				>
+					All
+				</button>
+				<button
+					class={['filter-button', { active: state.filter === 'active' }]}
+					onClick={() => setFilter('active')}
+				>
+					Active ({activeCount()})
+				</button>
+				<button
+					class={['filter-button', { active: state.filter === 'completed' }]}
+					onClick={() => setFilter('completed')}
+				>
+					Completed ({completedCount()})
+				</button>
+			</div>
 
 			{/* Todo list */}
 			<div class="todo-list">
-				{filteredTodos.length === 0 ? (
+				{filteredTodos().length === 0 ? (
 					<div class="empty-message">
-						{state.todos.length === 0 ? 'No todos yet. Add one above!' : `No ${state.filter} todos.`}
+						{state.todos.length === 0
+							? 'No todos yet. Add one above!'
+							: `No ${state.filter} todos.`}
 					</div>
 				) : (
 					computed.memo(filteredTodos, (todo) => (
@@ -143,21 +150,23 @@ export default function TodoWebComponent(props: {
 					))
 				)}
 			</div>
-			<for each={filteredTodos()}>{(todo: Todo) => (
-				<div class="todo-item">
-					<input type="checkbox" checked={todo.completed} />
-					<span class={['todo-text', { completed: todo.completed }]}>{todo.text}</span>
-				</div>
-			)}</for>
+			<for each={filteredTodos()}>
+				{(todo: Todo) => (
+					<div class="todo-item">
+						<input type="checkbox" checked={todo.completed} />
+						<span class={['todo-text', { completed: todo.completed }]}>{todo.text}</span>
+					</div>
+				)}
+			</for>
 
 			{/* Clear completed section */}
-			{state.showClearCompleted && completedCount() > 0 && (
-				<div class="clear-section">
+			<Scope>
+				<div if={state.showClearCompleted && completedCount() > 0} class="clear-section">
 					<button class="clear-button" onClick={clearCompleted}>
 						Clear {completedCount()} completed
 					</button>
 				</div>
-			)}
+			</Scope>
 		</>
 	)
 }

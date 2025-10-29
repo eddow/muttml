@@ -13,8 +13,7 @@ export default function WrapperComponent(
 		showChildren?: boolean
 		maxChildren?: number
 		children?: JSX.Element | JSX.Element[]
-	},
-	_context: Record<PropertyKey, any>
+	}
 ) {
 	const state = defaulted(props, {
 		title: 'Wrapper Component',

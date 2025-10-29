@@ -62,3 +62,4 @@ if (debugMutts) {
 }
 reactiveOptions.maxEffectChain = 100
 reactiveOptions.maxEffectReaction = 'debug'
+reactiveOptions.instanceMembers = false
