@@ -1,4 +1,4 @@
-import { Evolution, effect, reactiveOptions, ScopedCallback } from 'mutts/src'
+import { effect, reactiveOptions } from 'mutts/src'
 
 export function nf<T extends Function>(name: string, fn: T): T {
 	Object.defineProperty(fn, 'name', { value: name })
@@ -23,15 +23,9 @@ export function defined<T>(value: T | undefined, message = 'Value is defined'): 
 
 export const traces: Record<string, typeof console | undefined> = {}
 const counters: number[] = []
-const debugMutts = true
+const debugMutts = false
 if (debugMutts) {
 	Object.assign(reactiveOptions, {
-		touched(obj: any, evolution: Evolution, props?: any[], deps?: Set<ScopedCallback>) {
-			console.groupCollapsed('touched', obj, evolution)
-			console.log('props:', props)
-			console.log('deps:', deps)
-			console.groupEnd()
-		},
 		chain(targets: Function[], caller?: Function) {
 			console.groupCollapsed(
 				caller
@@ -42,7 +36,7 @@ if (debugMutts) {
 			console.log('targets:', targets)
 			console.groupEnd()
 			counters[0]++
-		} /*
+		},
 		beginChain(targets: Function[]) {
 			console.groupCollapsed('begin', targets)
 			counters.unshift(0)
@@ -50,6 +44,12 @@ if (debugMutts) {
 		endChain() {
 			console.groupEnd()
 			console.log('Effects:', counters.shift())
+		} /*
+		touched(obj: any, evolution: Evolution, props?: any[], deps?: Set<ScopedCallback>) {
+			console.groupCollapsed('touched', obj, evolution)
+			console.log('props:', props)
+			console.log('deps:', deps)
+			console.groupEnd()
 		},
 		enter(fn: Function) {
 			console.group('enter', fn.name || fn.toString())

@@ -2,40 +2,37 @@
  * Wrapper Component to demonstrate children usage
  */
 
-import { PounceComponent } from '..'
-import WrapperCSS from './Wrapper.scss?inline'
+import './Wrapper.scss'
+import { defaulted } from '../lib/utils'
 
+export default function WrapperComponent(
+	props: {
+		title?: string
+		description?: string
+		className?: string
+		showChildren?: boolean
+		maxChildren?: number
+		children?: JSX.Element | JSX.Element[]
+	},
+	_context: Record<PropertyKey, any>
+) {
+	const state = defaulted(props, {
+		title: 'Wrapper Component',
+		description: 'This wrapper contains children:',
+		className: 'wrapper',
+		showChildren: true,
+	})
 
-class WrapperComponent extends PounceComponent(() => ({
-	title: 'Wrapper Component',
-	description: 'This wrapper contains children:',
-	className: 'wrapper',
-	showChildren: true,
-	maxChildren: undefined,
-})) {
-	static readonly style = WrapperCSS
+	const childrenArray = Array.isArray(state.children)
+		? state.children
+		: (state.children ? [state.children] : [])
+	const childrenToShow = () => (state.maxChildren ? childrenArray.slice(0, state.maxChildren) : childrenArray)
 
-	get template() {
-		const title = () => this.title ?? 'Wrapper Component'
-		const description = () => this.description ?? 'This wrapper contains children:'
-		const className = () => this.className ?? 'wrapper'
-		const showChildren = () => this.showChildren ?? true
-		const maxChildren = () => this.maxChildren
-
-		// Use children from constructor or props
-		const children = this.children
-
-		// Limit children if maxChildren is specified
-		const childrenToShow = maxChildren() ? children.slice(0, maxChildren()) : children
-
-		return (
-			<div class={className()}>
-				<h3>{title()}</h3>
-				<p>{description()}</p>
-				{showChildren() && <div class="children">{childrenToShow}</div>}
-			</div>
-		)
-	}
+	return (
+		<div class={state.className}>
+			<h3>{state.title}</h3>
+			<p>{state.description}</p>
+			{state.showChildren && <div class="children">{childrenToShow()}</div>}
+		</div>
+	)
 }
-
-export default WrapperComponent

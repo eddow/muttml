@@ -3,8 +3,13 @@ import { attributesSymbol } from '../lib/component'
 declare global {
 	// Global h function for JSX
 	const h: any
+	const Fragment: any
+	type ComponentFunction = (
+		props: any,
+		context: Record<PropertyKey, any>
+	) => JSX.Element | JSX.Element[]
 	namespace JSX {
-		type Element = { render(context?: Record<PropertyKey, any>): Node }
+		type Element = { render(context?: Record<PropertyKey, any>): Node[] }
 		interface ElementClass {
 			template: any
 		}
@@ -68,6 +73,10 @@ declare global {
 		}
 
 		interface IntrinsicElements {
+			for: {
+				each: any[]
+				children: (item: any, index?: number) => JSX.Element
+			}
 			// Form Elements
 			input: BaseHTMLAttributes & {
 				type?:

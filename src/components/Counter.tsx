@@ -1,18 +1,29 @@
 /**
- * Counter Web Component using inline JSX templating
+ * Counter Web Component using inline JSX templating (functional standard)
  */
 
-import { PounceComponent } from '..'
-import CounterCSS from './Counter.scss?inline'
+import { effect } from 'mutts/src'
+import './Counter.scss'
+import { defaulted } from '../lib/utils'
 
-export default class CounterWebComponent extends PounceComponent(
-	(_: {
+export default function CounterWebComponent(
+	props: {
 		count: number
 		onCountIncremented?: (newCount: number) => void
 		onCountDecremented?: (newCount: number) => void
 		onCountReset?: () => void
 		onCountChanged?: (newCount: number, oldCount: number) => void
-	}) => ({
+		maxValue?: number
+		minValue?: number
+		step?: number
+		disabled?: boolean
+		showSlider?: boolean
+		showInput?: boolean
+		label?: string
+	},
+	context: Record<PropertyKey, any>
+) {
+	const state = defaulted(props, {
 		maxValue: 100,
 		minValue: 0,
 		step: 1,
@@ -21,116 +32,97 @@ export default class CounterWebComponent extends PounceComponent(
 		showInput: true,
 		label: 'Counter Component (JSX)',
 	})
-) {
-	public mount(): void {
-		console.log('🎯 Counter component mounted!', {
-			initialCount: this.count,
-			context: this.context,
-		})
+
+	console.log('🎯 Counter component mounted!', {
+		initialCount: state.count,
+		context,
+	})
+	effect(() => {
+		return () => {
+			console.log('👋 Counter component unmounted!', { finalCount: state.count })
+		}
+	})
+
+	function increment() {
+		const oldCount = state.count
+		state.count = state.count + 1
+		state.onCountIncremented?.(state.count)
+		state.onCountChanged?.(state.count, oldCount)
 	}
 
-	public unmount(): void {
-		console.log('👋 Counter component unmounted!', {
-			finalCount: this.count,
-		})
+	function decrement() {
+		const oldCount = state.count
+		state.count = state.count - 1
+		state.onCountDecremented?.(state.count)
+		state.onCountChanged?.(state.count, oldCount)
 	}
 
-	static readonly style = CounterCSS
-
-	get style() {
-		// Calculate color based on counter value (0-100)
-		// 0 = red, 100 = green
-		const normalizedCount = Math.max(0, Math.min(100, this.count))
-		const red = Math.round(255 * (1 - normalizedCount / 100))
-		const green = Math.round(255 * (normalizedCount / 100))
-
-		return `
-			.counter-text {
-				color: rgb(${red}, ${green}, 0);
-				transition: color 0.3s ease;
-			}
-		`
+	function reset() {
+		const oldCount = state.count
+		state.count = 0
+		state.onCountReset?.()
+		state.onCountChanged?.(state.count, oldCount)
 	}
 
-	get template() {
+	const counterTextStyle = () => {
+		const normalized = Math.max(0, Math.min(100, state.count))
+		const red = Math.round(255 * (1 - normalized / 100))
+		const green = Math.round(255 * (normalized / 100))
+		return `color: rgb(${red}, ${green}, 0); transition: color 0.3s ease;`
+	}
 
-		return (
-			<div>
-				<div>
-					<h2>{this.label}</h2>
-					<div class="count-display">
-						Count: <span class="counter-text">{this.count}</span>
-					</div>
-					<div class="message">
-						{this.count === 0 ? 'Click the button to increment!' : `Current count: ${this.count}`}
-					</div>
-					{this.showSlider && (
-						<div class="slider-container">
-							<label class="slider-label" htmlFor="count-slider">
-								Set Count: {this.count}
-							</label>
-							<input
-								type="range"
-								id="count-slider"
-								class="slider"
-								min={this.minValue}
-								max={this.maxValue}
-								step={this.step}
-								value={this.count}
-								disabled={this.disabled || this.maxValue === this.minValue}
-							/>
-						</div>
-					)}
-					{this.showInput && (
-						<div class="input-container">
-							<label class="input-label" htmlFor="count-input">
-								Direct Input:
-							</label>
-							<input
-								type="number"
-								id="count-input"
-								class="count-input"
-								min={this.minValue}
-								max={this.maxValue}
-								step={this.step}
-								value={this.count}
-								disabled={this.disabled || this.maxValue === this.minValue}
-							/>
-						</div>
-					)}
-					<div class="controls">
-						<button class="decrement" disabled={this.disabled || this.count <= this.minValue} onClick={() => this.decrement()}>
-							-
-						</button>
-						<button class="reset" disabled={this.disabled || this.count === this.minValue} onClick={() => this.reset()}>
-							Reset
-						</button>
-						<button class="increment" disabled={this.disabled || this.count >= this.maxValue} onClick={() => this.increment()}>
-							+
-						</button>
-					</div>
-				</div>
+	return <>
+		<h2>{state.label}</h2>
+		<div class="count-display">
+			Count: <span class="counter-text" style={counterTextStyle()}>{state.count}</span>
+		</div>
+		<div class="message">
+			{state.count === 0 ? 'Click the button to increment!' : `Current count: ${state.count}`}
+		</div>
+		{state.showSlider && (
+			<div class="slider-container">
+				<label class="slider-label" htmlFor="count-slider">
+					Set Count: {state.count}
+				</label>
+				<input
+					type="range"
+					id="count-slider"
+					class="slider"
+					min={state.minValue}
+					max={state.maxValue}
+					step={state.step}
+					value={state.count}
+					disabled={state.disabled || state.maxValue === state.minValue}
+				/>
 			</div>
-		)
-	}
-	private increment(): void {
-		const oldCount = this.count
-		this.count = this.count + 1
-		this.onCountIncremented?.(this.count)
-		this.onCountChanged?.(this.count, oldCount)
-	}
-
-	private decrement(): void {
-		const oldCount = this.count
-		this.count = this.count - 1
-		this.onCountDecremented?.(this.count)
-		this.onCountChanged?.(this.count, oldCount)
-	}
-
-	private reset(): void {
-		const oldCount = this.count
-		this.count = 0
-		this.onCountReset?.()
-		this.onCountChanged?.(this.count, oldCount)
-	}
+		)}
+		{state.showInput && (
+			<div class="input-container">
+				<label class="input-label" htmlFor="count-input">
+					Direct Input:
+				</label>
+				<input
+					type="number"
+					id="count-input"
+					class="count-input"
+					min={state.minValue}
+					max={state.maxValue}
+					step={state.step}
+					value={state.count}
+					disabled={state.disabled || state.maxValue === state.minValue}
+				/>
+			</div>
+		)}
+		<div class="controls">
+			<button class="decrement" disabled={state.disabled || state.count <= state.minValue} onClick={decrement}>
+				-
+			</button>
+			<button class="reset" disabled={state.disabled || state.count === state.minValue} onClick={reset}>
+				Reset
+			</button>
+			<button class="increment" disabled={state.disabled || state.count >= state.maxValue} onClick={increment}>
+				+
+			</button>
+		</div>
+	</>
 }

@@ -1,70 +1,46 @@
-import { addBatchCleanup, atomic, computed, effect, reactive, unwrap } from 'mutts/src'
-import { PounceElement } from '..'
+import { atomic, computed, effect, reactive, unwrap } from 'mutts/src'
 import { classNames } from './classNames'
-import { cleanupAllManagedChildren, storeCleanupForElement } from './cleanup'
 import { namedEffect } from './debug'
 import { getComponent } from './registry'
+import { array, propsInto } from './utils'
+
+export interface ComponentOptions {
+	context: Record<PropertyKey, any>
+}
+const logRender = (() => false)() ? console.log : () => {}
 
 /**
  * Custom h() function for JSX rendering - returns a mount function
  */
 export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[]): JSX.Element => {
 	// Get component constructor - either direct class or from registry
-	let ComponentCtor: any = null
+	let componentCtor: any = null
 
-	if (typeof tag === 'function' && tag.prototype && 'template' in tag.prototype) {
+	if (typeof tag === 'function') {
 		// Direct component class (PascalCase)
-		ComponentCtor = tag
+		componentCtor = tag
 	} else if (typeof tag === 'string' && getComponent(tag)) {
 		// Registered component
-		ComponentCtor = getComponent(tag)!
+		componentCtor = getComponent(tag)!
 	}
 
 	// If we have a component, return mount function
-	if (ComponentCtor) {
-		const host = new PounceElement()
-		const shadow = host.shadowRoot!
-
-		// Pass props, children, and host to component constructor
-		const instance = new ComponentCtor(props, children, host)
-
-		// Use adoptedStyleSheets for static styles
-		const staticStyle = (ComponentCtor as any).style
-		if (staticStyle && typeof staticStyle === 'string') {
-			const styleSheet = new CSSStyleSheet()
-			styleSheet.replaceSync(staticStyle)
-			shadow.adoptedStyleSheets = [styleSheet]
-		}
-
+	if (componentCtor) {
 		// Effect for styles - only updates style container
-		const styleCleanup = effect(function style() {
-			const instStyle = instance.style as string | undefined
-
-			// Use adoptedStyleSheets for instance styles
-			if (instStyle) {
-				const styleSheet = new CSSStyleSheet()
-				styleSheet.replaceSync(instStyle)
-				shadow.adoptedStyleSheets = [shadow.adoptedStyleSheets[0], styleSheet].filter(Boolean)
-			}
-		})
-		storeCleanupForElement(host, styleCleanup)
 		return {
 			render(context: Record<PropertyKey, any> = {}) {
+				logRender('render component', componentCtor.name)
+				const givenProps = reactive(propsInto(props, { children }))
 				// Set context on the component instance
-				instance.context = context = Object.create(context)
-
-				function describeTemplate() {
-					return instance.template.render(context)
-				}
-				// Effect for content - only updates content container
-				const contentCleanup = effect(function setShadow() {
-					const template = computed(describeTemplate)
-					// template is already a DOM element from h()
-					shadow.replaceChildren(unwrap(template))
+				const childContext = Object.create(context)
+				const rendered = array.computed(function renderEffect() {
+					let elements = componentCtor(givenProps, childContext)
+					if ('render' in elements) elements = elements.render(childContext)
+					if (!Array.isArray(elements)) elements = [elements]
+					return processChildren(elements, childContext)
 				})
-				storeCleanupForElement(host, contentCleanup)
 
-				return host
+				return rendered
 			},
 		}
 	}
@@ -82,29 +58,26 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 		if (/^on[A-Z]/.test(key)) {
 			// Event handler
 			const eventType = key.slice(2).toLowerCase()
-			const eventCleanup = namedEffect(`event:${key}`, () => {
+			namedEffect(`event:${key}`, () => {
 				const registeredEvent = atomic(value.get?.() ?? value())
 				element.addEventListener(eventType, registeredEvent)
 				return () => element.removeEventListener(eventType, registeredEvent)
 			})
-			storeCleanupForElement(element, eventCleanup)
 		} else if (key === 'class') {
 			if (typeof value === 'function') {
 				// Reactive class (e.g., `class={() => ['btn', { active: this.isActive }]}`)
-				const classCleanup = effect(function className() {
+				effect(function className() {
 					element.className = classNames(value())
 				})
-				storeCleanupForElement(element, classCleanup)
 			} else {
 				// Static class
 				element.className = classNames(value)
 			}
 		} else if (typeof value === 'object' && value !== null && 'get' in value && 'set' in value) {
 			// 2-way binding for regular elements (e.g., `value={{get: () => this.value, set: val => this.value = val}}`)
-			const propCleanup = namedEffect(`prop:${key}`, () => {
+			namedEffect(`prop:${key}`, () => {
 				element[key] = value.get()
 			})
-			storeCleanupForElement(element, propCleanup)
 			if (tag === 'input') {
 				switch (element.type) {
 					case 'checkbox':
@@ -129,10 +102,9 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 			}
 		} else if (typeof value === 'function') {
 			// Reactive prop (e.g., `prop={() => this.counter}`)
-			const propCleanup = namedEffect(`prop:${key}`, () => {
+			namedEffect(`prop:${key}`, () => {
 				element[key] = value()
 			})
-			storeCleanupForElement(element, propCleanup)
 		} else if (key === 'style' && typeof value === 'object') {
 			// Style object
 			Object.assign(element.style, value)
@@ -147,7 +119,8 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 	// Create plain HTML element - also return mount object for consistency
 	return {
 		render(context: Record<PropertyKey, any> = {}) {
-			const childrenCleanup = effect(function mountChildren() {
+			logRender('render tag', tag)
+			effect(function mountChildren() {
 				// Render children
 				if (children && children.length > 0 && !props?.innerHTML) {
 					// Process new children
@@ -155,12 +128,9 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 					effect(function redraw() {
 						// Replace children
 						reconcileChildren(element, processedChildren)
-						addBatchCleanup(cleanupAllManagedChildren)
 					})
 				}
 			})
-			// TODO: Should not be necessary, if/as long as cleanups are stored correctly AND avoid GC cleanup
-			storeCleanupForElement(element, childrenCleanup)
 
 			return element
 		},
@@ -168,14 +138,16 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 }
 
 // Optional: Add JSX support for fragments
-export const Fragment = (props: { children: Child[] }) => props.children
+const Fragment = (props: { children: Child[] }) => props.children
 // Make h available globally
-;(globalThis as any).h = h
+Object.assign(globalThis, { h, Fragment })
 
-function reconcileChildren(parent: Node, newChildren: Node[]) {
-	console.log('%creconcileChildren', 'color: red; font-weight: bold;', parent, newChildren)
+export function reconcileChildren(parent: Node, newChildren: Node | Node[] | undefined) {
+	logRender('%creconcileChildren', 'color: red; font-weight: bold;', parent, newChildren)
 	// No need to precompute oldChildren as an array; work with live DOM
 	let newIndex = 0
+	if (!newChildren) newChildren = []
+	if (!Array.isArray(newChildren)) newChildren = [newChildren]
 
 	// Iterate through newChildren and sync with live DOM
 	while (newIndex < newChildren.length) {
@@ -260,10 +232,10 @@ export function processChildren(children: Child[], context: Record<PropertyKey, 
 		return x && typeof x === 'object' && 'render' in x ? x.render(context) : x
 	}
 	const perChild = computed.memo(children, (child) =>
-		typeof child === 'function' ? child() : child
+		rendered(typeof child === 'function' ? child() : child)
 	)
 	const mountedChildren: (Node | false | (Node | false)[])[] = computed.memo(perChild, (partial) =>
-		Array.isArray(partial) ? processChildren(partial, context) : toNode(rendered(partial))
+		Array.isArray(partial) ? processChildren(partial, context) : toNode(partial)
 	)
 	// Second loop: Flatten the temporary results into final Node[]
 	const flattened: Node[] = reactive([])

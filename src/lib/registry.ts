@@ -1,7 +1,7 @@
 // Registry to link JSX custom tags to component classes
-const componentRegistry = new Map<string, new (...args: any[]) => any>()
+const componentRegistry = new Map<string, ComponentFunction>()
 
-export function registerComponent(tagName: string, ctor: new (...args: any[]) => any) {
+export function registerComponent(tagName: string, ctor: ComponentFunction) {
 	componentRegistry.set(tagName, ctor)
 }
 

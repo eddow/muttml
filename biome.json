@@ -25,7 +25,11 @@
 					"fix": "safe"
 				},
 				"noParameterAssign": "off",
-				"useImportType": "off"
+				"useImportType": "off",
+				"useConst": {
+					"level": "info",
+					"fix": "none"
+				}
 			},
 			"suspicious": {
 				"noExplicitAny": "off",
