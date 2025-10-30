@@ -53,7 +53,7 @@ const state = reactive({
 	list: [] as string[],
 })
 // Add components using PascalCase JSX with children
-const app = ()=> (
+const App = () => (
 	<>
 		<div>
 			List: <span>{state.list.join(', ')}</span>
@@ -63,4 +63,4 @@ const app = ()=> (
 )
 
 // Initialize the app using the automated bindApp helper
-bindApp(app, '#mini')
+bindApp(<App />, '#mini')

@@ -4,7 +4,7 @@
 
 import { effect, trackEffect } from 'mutts/src'
 import './Todo.scss'
-import { array, compute, defaulted } from '../lib/utils'
+import { array, defaulted } from '../lib/utils'
 import { Scope } from './controlFlow'
 
 interface Todo {
@@ -73,10 +73,10 @@ export default function TodoWebComponent(
 		array.filter(state.todos, (todo) => !todo.completed)
 	}
 
-	const activeCount = compute(() => state.todos.filter((todo) => !todo.completed).length)
-	const completedCount = compute(() => state.todos.filter((todo) => todo.completed).length)
+	const activeCount = () => state.todos.filter((todo) => !todo.completed).length
+	const completedCount = () => state.todos.filter((todo) => todo.completed).length
 
-	const filteredTodos = compute(() => {
+	const filteredTodos = () => {
 		switch (state.filter) {
 			case 'active':
 				return state.todos.filter((todo) => !todo.completed)
@@ -85,7 +85,7 @@ export default function TodoWebComponent(
 			default:
 				return state.todos
 		}
-	})
+	}
 	function setFilter(filter: 'all' | 'active' | 'completed') {
 		state.filter = filter
 	}

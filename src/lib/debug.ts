@@ -1,10 +1,15 @@
-import { effect, reactiveOptions } from 'mutts/src'
+import { activeEffect, effect, reactiveOptions } from 'mutts/src'
 
 export function nf<T extends Function>(name: string, fn: T): T {
 	Object.defineProperty(fn, 'name', { value: name })
 	return fn
 }
 export function namedEffect(name: string, fn: () => void): () => void {
+	if (!activeEffect) {
+		console.warn(`TL;DR: Define reactive behaviors in components, not in the root code.
+Reactive behavior should only occur within effects.
+See https://github.com/RJ-Ferguson/mutts/blob/main/docs/api-reference.md#assertinffect`)
+	}
 	return effect(nf(name, fn))
 }
 export class AssertionError extends Error {
@@ -60,6 +65,6 @@ if (debugMutts) {
 		},*/,
 	})
 }
-reactiveOptions.maxEffectChain = 100
+reactiveOptions.maxEffectChain = 1000
 reactiveOptions.maxEffectReaction = 'debug'
 reactiveOptions.instanceMembers = false

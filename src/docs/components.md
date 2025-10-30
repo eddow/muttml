@@ -17,7 +17,7 @@ function Greeting(props: { name: string }) {
 Every component receives two parameters:
 
 1. **`props`**: The component's properties
-2. **`scope`**: The reactive scope for conditional rendering (advanced)
+2. **`scope`**: The reactive scope for conditional rendering (similar to React context or Svelte context)
 
 ```tsx
 function MyComponent(
@@ -32,6 +32,10 @@ function MyComponent(
   )
 }
 ```
+
+**Important:** The `scope` parameter uses prototype inheritance. When component A renders component B, B automatically receives A's scope. Any modifications A makes to `scope` are visible to B and all its descendants. This means if `<ComponentA><ComponentB /></ComponentA>` is written in `ComponentC`, ComponentB will still receive ComponentA's scope modifications.
+
+See the [Advanced Features Guide](./advanced.md#scope-management) for more details on scope management.
 
 ## Default Props
 
@@ -73,8 +77,9 @@ Simple values passed directly:
 Props can be reactive functions or two-way bindings:
 
 ```tsx
-// One-way binding
-<Counter count={() => state.counter} />
+// One-way binding with computed
+const doubled = computed(() => state.counter * 2)
+<Counter count={doubled} />
 
 // Two-way binding
 <Counter count={state.counter} />

@@ -43,7 +43,22 @@ Use `when:` with functions for custom logic:
 
 ## Scope Management
 
-The `Scope` component provides a way to share data across a component tree:
+Scope in Pounce-TS is like React's context or Svelte's context - it provides a way to share data down the component tree through **prototype inheritance**.
+
+### How Scope Works
+
+When a component renders its children, it creates a new scope that inherits from the parent scope using JavaScript's prototype chain. This means:
+
+1. **Scope flows down**: Children automatically receive the parent's scope
+2. **Modifications are inherited**: If parent A modifies scope and renders child B, B sees A's modifications
+3. **Siblings share scope**: Components at the same level share the same scope
+4. **Scope changes propagate**: Changes to scope in a parent are immediately visible to all descendants
+
+### The `<Scope>` Component
+
+The `<Scope>` component is a special component that forwards its children but adds its props to the scope. It doesn't render any DOM elements itself - it just injects its attributes into the scope for its children to use.
+
+**Usage example:**
 
 ```tsx
 import { Scope } from '../lib/renderer'
@@ -70,11 +85,69 @@ function AdminPanel(props: any, scope: Record<PropertyKey, any>) {
 }
 ```
 
+Since `<Scope>` doesn't render any wrapper, this renders as flat DOM - just the children without any extra `<div>` or other container.
+
+### Scope Inheritance Example
+
+```tsx
+function ComponentC() {
+  return <ComponentA><ComponentB /></ComponentA>
+}
+
+function ComponentA(props: any, scope: Record<PropertyKey, any>) {
+  // Modify scope
+  scope.theme = 'dark'
+  
+  // ComponentB will inherit scope.theme = 'dark'
+  return <div>{props.children}</div>
+}
+
+function ComponentB(props: any, scope: Record<PropertyKey, any>) {
+  // This component receives scope from A, even though it was written in C
+  return <div class={scope.theme}>Using dark theme</div>
+}
+```
+
+### Using Scope for Conditional Rendering
+
+Scope is particularly powerful for conditional rendering using the `if:`, `else:`, and `when:` attributes:
+
+```tsx
+function App() {
+  const state = reactive({ isLoggedIn: true, role: 'admin' })
+  
+  return (
+    <Scope isLoggedIn={state.isLoggedIn} role={state.role}>
+      <Header />
+      <MainContent />
+    </Scope>
+  )
+}
+
+function Header(props: any, scope: Record<PropertyKey, any>) {
+  return (
+    <div>
+      <div if:isLoggedIn={true}>Welcome!</div>
+      <div else:isLoggedIn={true}>Please log in</div>
+    </div>
+  )
+}
+
+function MainContent(props: any, scope: Record<PropertyKey, any>) {
+  return (
+    <div>
+      <div if:role={'admin'}>Admin Dashboard</div>
+      <div else:role={'admin'}>User Dashboard</div>
+    </div>
+  )
+}
+```
+
 ## Control Flow Components
 
 ### for Loops
 
-Use the `<for>` component for reactive iteration:
+Use the `<For>` component for reactive iteration:
 
 ```tsx
 function TodoList() {
@@ -85,13 +158,13 @@ function TodoList() {
   
   return (
     <div>
-      <for each={todos}>
+      <For each={todos}>
         {(todo) => (
           <div key={todo.id}>
             {todo.text}
           </div>
         )}
-      </for>
+      </For>
     </div>
   )
 }
@@ -123,7 +196,7 @@ Use the `style` attribute for inline styles:
 <div style="color: red; font-size: 16px;">Styled text</div>
 
 // Or with reactive style
-<div style={() => `color: ${state.color};`}>Dynamic style</div>
+<div style={`color: ${state.color};`}>Dynamic style</div>
 ```
 
 ### CSS Classes
@@ -141,22 +214,30 @@ Use the `class` attribute for CSS classes:
 <div class={['container', { active: state.isActive }]}>Content</div>
 
 // Reactive classes
-<div class={() => state.isActive ? 'active' : 'inactive'}>Content</div>
+<div class={state.isActive ? 'active' : 'inactive'}>Content</div>
 ```
 
-Use the `classNames` utility for complex class logic:
+For complex class logic, you can use conditional expressions or arrays:
 
 ```tsx
-import { classNames } from '../lib/classNames'
-
 function Button(props: { active: boolean; disabled: boolean }) {
-  const classes = classNames({
-    'btn': true,
-    'btn-active': props.active,
-    'btn-disabled': props.disabled
-  })
-  
-  return <button class={classes}>Click me</button>
+  return (
+    <button class={`btn ${props.active ? 'active' : ''} ${props.disabled ? 'disabled' : ''}`}>
+      Click me
+    </button>
+  )
+}
+```
+
+Or with array syntax:
+
+```tsx
+function Button(props: { active: boolean; disabled: boolean }) {
+  return (
+    <button class={['btn', props.active && 'active', props.disabled && 'disabled'].filter(Boolean).join(' ')}>
+      Click me
+    </button>
+  )
 }
 ```
 
@@ -223,8 +304,9 @@ function Input(props: {
 // Usage
 const state = reactive({ text: 'Hello' })
 
-// Reactive prop
-<Input value={() => state.text} />
+// Computed value
+const displayText = computed(() => state.text.toUpperCase())
+<Input value={displayText} />
 
 // Two-way binding
 <Input value={state.text} />

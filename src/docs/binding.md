@@ -90,10 +90,7 @@ const state = reactive({ price: 0 })
 For read-only values or computed properties, use one-way binding:
 
 ```tsx
-// One-way binding with function
-<input value={() => state.fullName} />
-
-// Computed value
+// Computed value (reactive)
 const displayName = computed(() => state.name.toUpperCase())
 <input value={displayName} />
 ```
@@ -114,8 +111,9 @@ const state = reactive({ count: 0 })
 // Two-way binding
 <Counter count={state.count} />
 
-// One-way binding
-<Counter count={() => state.count * 2} />
+// One-way binding with computed
+const doubled = computed(() => state.count * 2)
+<Counter count={doubled} />
 ```
 
 ### Updating Parent State from Child

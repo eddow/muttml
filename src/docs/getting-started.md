@@ -73,11 +73,8 @@ function MyApp() {
   )
 }
 
-// Build the app
-const app = <MyApp />
-
-// Bind to DOM element (bindApp will call .render() automatically)
-bindApp(app, '#app')
+// Bind to DOM element (bindApp expects a factory function)
+bindApp(() => <MyApp />, '#app')
 ```
 
 Create an HTML file with a container:

@@ -31,8 +31,7 @@ function Counter() {
   )
 }
 
-const app = <Counter />
-bindApp(app)
+bindApp(<Counter />)
 ```
 
 ## Todo List
@@ -148,8 +147,7 @@ function TodoApp() {
   )
 }
 
-const app = <TodoApp />.render()
-bindApp(app)
+bindApp(<TodoApp />)
 ```
 
 ## Form with Validation

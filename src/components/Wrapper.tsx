@@ -9,7 +9,7 @@ export default function WrapperComponent(
 	props: {
 		title?: string
 		description?: string
-		className?: string
+		class?: string
 		showChildren?: boolean
 		maxChildren?: number
 		children?: JSX.Element | JSX.Element[]
@@ -18,7 +18,7 @@ export default function WrapperComponent(
 	const state = defaulted(props, {
 		title: 'Wrapper Component',
 		description: 'This wrapper contains children:',
-		className: 'wrapper',
+		class: 'wrapper',
 		showChildren: true,
 	})
 
@@ -28,7 +28,7 @@ export default function WrapperComponent(
 	const childrenToShow = () => (state.maxChildren ? childrenArray.slice(0, state.maxChildren) : childrenArray)
 
 	return (
-		<div class={state.className}>
+		<div class={state.class}>
 			<h3>{state.title}</h3>
 			<p>{state.description}</p>
 			{state.showChildren && <div class="children">{childrenToShow()}</div>}

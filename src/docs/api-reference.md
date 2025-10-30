@@ -82,7 +82,7 @@ Check if a component is registered.
 
 ### `defaulted(value, defaults)`
 
-Creates a proxy that provides default values for undefined properties.
+Creates a proxy that provides default values for undefined properties. This is the primary utility for handling optional props in components.
 
 **Parameters:**
 - `value` - The object to wrap
@@ -98,30 +98,7 @@ const props = defaulted(inputProps, {
 })
 ```
 
-### `propsInto(props, into?)`
-
-Converts props descriptor into a target object, handling reactive values and bindings.
-
-**Parameters:**
-- `props` - Props descriptor object
-- `into` - Target object (optional)
-
-**Returns:** Object with reactive properties
-
-### `classNames(input)`
-
-Generates CSS class name string from various inputs.
-
-**Parameters:**
-- `input` - String, array, or object with boolean values
-
-**Returns:** Space-separated class string
-
-**Example:**
-```tsx
-classNames(['container', { active: true, disabled: false }])
-// Returns: "container active"
-```
+**Note:** Other utilities like `propsInto` and `classNames` are for internal framework use only and should not be imported or used directly in your code.
 
 ## Array Utilities
 
@@ -220,15 +197,15 @@ trackEffect((obj, evolution) => {
 
 ## Control Flow Components
 
-### `<for each={array}>`
+### `<For each={array}>`
 
 Iterate over a reactive array.
 
 **Example:**
 ```tsx
-<for each={items}>
+<For each={items}>
   {(item) => <div>{item.name}</div>}
-</for>
+</For>
 ```
 
 ### `<Scope>`

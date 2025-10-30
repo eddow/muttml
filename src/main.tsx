@@ -17,7 +17,7 @@ const state = reactive({
 // biome-ignore lint/style/useConst: set in the props
 let todos = reactive([])
 // Build the app virtual tree and render to a DocumentFragment
-const app = ()=> (
+const App = ()=> (
 	<>
 		<div>
 			<div style="text-align: center; margin-bottom: 30px;">
@@ -88,4 +88,4 @@ const app = ()=> (
 )
 
 // Initialize the app using the automated bindApp helper
-bindApp(app, '#app')
+bindApp(<App />, '#app')

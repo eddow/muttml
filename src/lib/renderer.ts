@@ -1,7 +1,8 @@
-import { activeEffect, atomic, computed, effect, reactive, unwrap } from 'mutts/src'
+import { atomic, computed, effect, reactive, unwrap } from 'mutts/src'
 import { classNames } from './classNames'
 import { namedEffect } from './debug'
 import { getComponent } from './registry'
+import { styles } from './styles'
 import { array, propsInto } from './utils'
 
 const logRender = (() => false)() ? console.log : () => {}
@@ -92,8 +93,20 @@ export const h = (
 				// Static class
 				element.className = classNames(value)
 			}
+		} else if (key === 'style') {
+			// Inline styles via styles() helper; supports objects, arrays, strings, and reactive functions
+			if (typeof value === 'function') {
+				effect(function styleEffect() {
+					const computed = styles(value())
+					element.removeAttribute('style')
+					Object.assign(element.style, computed)
+				})
+			} else {
+				const computed = styles(value as any)
+				element.removeAttribute('style')
+				Object.assign(element.style, computed)
+			}
 		} else if (typeof value === 'object' && value !== null && 'get' in value && 'set' in value) {
-			if (!activeEffect) debugger
 			// 2-way binding for regular elements (e.g., `value={{get: () => this.value, set: val => this.value = val}}`)
 			namedEffect(`prop:${key}`, () => {
 				element[key] = value.get()
@@ -126,9 +139,6 @@ export const h = (
 			namedEffect(`prop:${key}`, () => {
 				element[key] = value()
 			})
-		} else if (key === 'style' && typeof value === 'object') {
-			// Style object
-			Object.assign(element.style, value)
 		} else if (key === 'innerHTML') {
 			element.innerHTML = String(value)
 		} else {
@@ -159,8 +169,10 @@ export function Scope(
 	props: { children?: any; [key: string]: any },
 	scope: Record<PropertyKey, any>
 ) {
-	scope._ = true
-	for (const [key, value] of Object.entries(props)) if (key !== 'children') scope[key] = value
+	effect(function scopeEffect() {
+		if (!('_' in props)) scope._ = true
+		for (const [key, value] of Object.entries(props)) if (key !== 'children') scope[key] = value
+	})
 	return props.children
 }
 export function For<T>(props: { each: T[]; children: (item: T, index?: number) => JSX.Element }) {

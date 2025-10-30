@@ -67,8 +67,7 @@ function Counter() {
   )
 }
 
-const app = <Counter />
-bindApp(app)
+bindApp(<Counter />)
 ```
 
 ## 🎯 Key Concepts

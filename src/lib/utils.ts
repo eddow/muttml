@@ -95,7 +95,3 @@ export const array = {
 		return false
 	},
 }
-
-export function compute<T>(computer: () => T) {
-	return () => computed(computer)
-}
