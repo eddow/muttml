@@ -242,6 +242,54 @@ function TodoList(props: { todos: Todo[] }) {
 5. **Clean up effects**: Return cleanup functions from `effect()`
 
 
+## `use:` mixins (element/component directives)
+
+The `use:` directive lets you attach behaviors ("mixins") implemented on the current `scope` to either DOM elements or component results.
+
+- Define a mixin on the scope: `scope.myMixin(target, value, scope)`
+- Use it in JSX: `use:myMixin={value}`
+
+Signature
+- `target`: `Node | Node[]` — the rendered node(s). For components, this is usually an array of HTMLElements; for intrinsic elements, a single HTMLElement.
+- `value`: any | undefined — the value passed from `use:myMixin={...}`; bare `use:myMixin` yields `undefined`.
+- `scope`: the current scope object.
+- Return value: optional cleanup function `() => void` (called on dispose/re-run), or nothing.
+
+Example: resize mixin with ResizeObserver
+
+```tsx
+function ResizeSandbox(_props: {}, scope: Record<PropertyKey, any>) {
+  const size = reactive({ width: 0, height: 0 })
+
+  scope.resize = (target: Node | Node[], value: any, _scope: Record<PropertyKey, any>) => {
+    const element = Array.isArray(target) ? target[0] : target
+    if (!(element instanceof HTMLElement)) return
+    const ro = new ResizeObserver((entries) => {
+      const rect = entries[0].contentRect
+      size.width = Math.round(rect.width)
+      size.height = Math.round(rect.height)
+      if (typeof value === 'function') value(size.width, size.height)
+    })
+    ro.observe(element)
+    return () => ro.disconnect()
+  }
+
+  return (
+    <div
+      style="resize: both; overflow: auto; border: 1px solid #ccc; padding: 8px; min-width: 120px; min-height: 80px;"
+      use:resize={(w: number, h: number) => { size.width = w; size.height = h }}
+    >
+      {size.width} × {size.height}
+    </div>
+  )
+}
+```
+
+Notes
+- Works for both intrinsic elements and components.
+- Treat component targets as arrays (`Node[]`); pick the first node if needed.
+- Mixins can be reactive (they’ll re-run when `value` changes) and should return a cleanup function to unhook observers/listeners.
+
 ## `this` meta (refs)
 
 Use the `this` attribute to capture a reference to either:

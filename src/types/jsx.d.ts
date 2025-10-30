@@ -25,43 +25,16 @@ declare global {
 		interface ElementClass {
 			template: any
 		}
-
-		// Scope-aware directive typings (if/else/when)
-		// Consumers can augment this interface to provide strong types per scope name.
-		// The '_' key represents the default scope used by bare directives like `if={(v)=>...}`.
-		interface JSXScopeTypes {
-			_: any
-			[name: string]: any
-		}
-
-		type DirectivePrefix = 'if' | 'else' | 'when'
-
-		type DirectivePredicate<Value> = (value: Value) => boolean
-
-		type DirectiveValue<Value> = boolean | DirectivePredicate<Value>
-
-		// Default-scope directives: support both bare (e.g. `if`) and explicit `:*_` (e.g. `if:_`).
-		type DefaultDirectiveProps = {
-			[K in DirectivePrefix]?: DirectiveValue<JSXScopeTypes['_']>
-		} & {
-			[K in `${DirectivePrefix}:_`]?: DirectiveValue<JSXScopeTypes['_']>
-		}
-
-		// Named-scope directives for a single scope name.
-		type NamedDirectivePropsForScope<ScopeName extends keyof JSXScopeTypes & string> = {
-			[K in `${DirectivePrefix}:${ScopeName}`]?: DirectiveValue<JSXScopeTypes[ScopeName]>
-		}
-
-		// All named-scope directives combined.
-		type AllNamedDirectiveProps = {
-			[SN in keyof JSXScopeTypes & string]: NamedDirectivePropsForScope<SN>
-		}[keyof JSXScopeTypes & string]
 		// Override the default JSX children handling
 		// Allow any children type so components can accept function-as-children
 		interface IntrinsicAttributes {
 			children?: any
 			// Meta: capture component reference on render
 			this?: Node | Node[]
+			[`if:${ScopeName}`]?: boolean
+			[`else:${ScopeName}`]?: boolean
+			[`when:${ScopeName}`]?: (value: any) => boolean
+			[`use:${ScopeName}`]?: any //(target: Node | Node[], value: any, scope: Record<PropertyKey, any>) => void
 		}
 
 		// Custom class type for conditional classes
@@ -151,10 +124,10 @@ declare global {
 					| 'reset'
 					| 'button'
 					| 'range'
-				value?: any
+				value?: string | number
 				checked?: boolean
 				'update:checked'?: (value: boolean) => void
-				'update:value'?: (value: any) => void
+				'update:value'?: (value: string | number) => void
 				placeholder?: string
 				disabled?: boolean
 				required?: boolean
@@ -182,7 +155,7 @@ declare global {
 			}
 
 			textarea: BaseHTMLAttributes & {
-				value?: any
+				value?: string
 				placeholder?: string
 				disabled?: boolean
 				required?: boolean

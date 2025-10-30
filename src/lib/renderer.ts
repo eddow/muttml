@@ -6,7 +6,7 @@ import { styles } from './styles'
 import { array, propsInto } from './utils'
 
 const logRender = (() => false)() ? console.log : () => {}
-const rootScope = reactive({ _: true })
+export const rootScope = reactive({ _: true })
 
 /**
  * Custom h() function for JSX rendering - returns a mount function
@@ -26,7 +26,7 @@ export const h = (
 			collectedCategories.this = setComponent
 			continue
 		}
-		const match = ['if', 'else', 'when'].includes(key)
+		const match = ['if', 'else', 'when', 'use'].includes(key)
 			? ['', key, '_']
 			: key.match(/^([^:]+):(.+)$/)
 		if (match) {
@@ -264,10 +264,13 @@ export function processChildren(children: Child[], scope: Record<PropertyKey, an
 		const renderer: any = typeof child === 'function' ? child() : child
 		let partial: any = renderer
 		if (renderer && typeof renderer === 'object' && 'render' in renderer) {
+			function valued(to: any) {
+				if (to === true) return undefined
+				return computed(to.get ?? to)
+			}
 			function lax(given: any, to: any) {
-				if (to === true) return !!given
-				const compared = computed(to.get ?? to)
-				return given === compared
+				const compared = valued(to)
+				return compared === undefined ? !!given : given === compared
 			}
 			if ('if' in renderer)
 				for (const [key, value] of Object.entries(renderer.if) as [string, any])
@@ -283,6 +286,13 @@ export function processChildren(children: Child[], scope: Record<PropertyKey, an
 			if ('this' in renderer) {
 				renderer.this(partial)
 			}
+			if ('use' in renderer)
+				for (const [key, value] of Object.entries(renderer.use) as [string, any])
+					effect(() => {
+						if (typeof scope[key] !== 'function')
+							throw new Error(`${key} in scope is not a function`)
+						return scope[key](partial, valued(value), scope)
+					})
 		}
 		if (!partial && typeof partial !== 'number') return
 		if (Array.isArray(partial)) return processChildren(partial, scope)

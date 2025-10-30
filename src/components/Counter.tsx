@@ -89,7 +89,7 @@ export default function CounterWebComponent(
 					max={state.maxValue}
 					step={state.step}
 					value={state.count}
-					update:value={(v) => {state.count = Number(v)}}
+					update:value={(v: string) => {state.count = Number(v)}}
 					disabled={state.disabled || state.maxValue === state.minValue}
 				/>
 			</div>
