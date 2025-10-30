@@ -60,6 +60,8 @@ declare global {
 		// Allow any children type so components can accept function-as-children
 		interface IntrinsicAttributes {
 			children?: any
+			// Meta: capture component reference on render
+			this?: Node | Node[]
 		}
 
 		// Custom class type for conditional classes
@@ -126,6 +128,7 @@ declare global {
 		interface IntrinsicElements {
 			// Form Elements
 			input: BaseHTMLAttributes & {
+				name?: string
 				type?:
 					| 'text'
 					| 'password'

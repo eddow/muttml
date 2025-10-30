@@ -17,7 +17,9 @@ const state = reactive({
 // biome-ignore lint/style/useConst: set in the props
 let todos = reactive([])
 // Build the app virtual tree and render to a DocumentFragment
-const App = ()=> (
+const refs: Record<string, Node | Node[]> = {}
+console.log('refs', refs)
+const App = () => (
 	<>
 		<div>
 			<div style="text-align: center; margin-bottom: 30px;">
@@ -57,6 +59,7 @@ const App = ()=> (
 				<h3>Regular DOM Element 2-Way Binding Test</h3>
 				<p>This input is bound to the same state as the counter:</p>
 				<input
+					this={refs.input}
 					value={state.sharedCount}
 					style="padding: 8px; margin: 5px; border: 1px solid #ccc; border-radius: 4px;"
 				/>
@@ -65,6 +68,7 @@ const App = ()=> (
 				</p>
 			</div>
 			<CounterComponent
+				this={refs.counter}
 				count={state.sharedCount}
 				onCountChanged={(newCount: number, oldCount: number) => {
 					console.log(`Counter changed from ${oldCount} to ${newCount}`)
@@ -81,7 +85,7 @@ const App = ()=> (
 				}}
 			/>
 			<WrapperComponent>
-				<TodoComponent todos={todos} />
+				<TodoComponent this={refs.todos} todos={todos} />
 			</WrapperComponent>
 		</div>
 	</>

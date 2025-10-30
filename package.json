@@ -18,6 +18,19 @@
     "url": "git+https://github.com/eddow/pounce-ts.git"
   },
   "type": "module",
+  "types": "./src/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./src/index.d.ts",
+      "import": "./src/lib/index.ts",
+      "default": "./src/lib/index.ts"
+    },
+    "./plugin": {
+      "types": "./src/babel-plugin-jsx-reactive.ts",
+      "import": "./src/babel-plugin-jsx-reactive.ts",
+      "default": "./src/babel-plugin-jsx-reactive.ts"
+    }
+  },
   "devDependencies": {
     "@babel/core": "^7.28.4",
     "@babel/plugin-proposal-decorators": "^7.28.0",

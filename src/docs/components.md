@@ -242,3 +242,55 @@ function TodoList(props: { todos: Todo[] }) {
 5. **Clean up effects**: Return cleanup functions from `effect()`
 
 
+## `this` meta (refs)
+
+Use the `this` attribute to capture a reference to either:
+- **A DOM element** (for intrinsic elements like `div`, `input`, ...), or
+- **The rendered output of a component**, which is typically an array of `HTMLElement` when the component renders multiple root nodes.
+
+Behavior
+- The value passed to `this` must be an L‑value (a ref sink). In the default renderer, this is anything that provides a callable value with a `.set(...)` method; on render, the renderer will call that setter with the rendered value.
+- The value provided to your setter will be:
+  - `HTMLElement` for regular DOM elements.
+  - `HTMLElement[]` for components (most components produce arrays; even a single root may be wrapped as an array by the renderer).
+- The setter may be called more than once due to re-renders.
+
+Examples
+
+Capture a DOM element:
+
+```tsx
+const refs: Record<string, any> = {}
+
+<input
+  this={refs.input}
+  value={state.sharedCount}
+/>
+```
+
+Capture a component’s rendered nodes:
+
+```tsx
+const refs: Record<string, any> = {}
+
+<CounterComponent
+  this={refs.counter}
+  count={state.sharedCount}
+/>
+```
+
+Capture multiple component refs in a wrapper:
+
+```tsx
+const refs: Record<string, any> = {}
+
+<WrapperComponent>
+  <TodoComponent this={refs.todos} todos={todos} />
+</WrapperComponent>
+```
+
+Notes
+- Treat component refs as arrays of `HTMLElement`. If you need a single node, select `refs.counter?.get?.()[0]` (depending on your ref shape) or handle both `HTMLElement | HTMLElement[]` defensively.
+- If your own ref abstraction differs, adapt your L‑value so that `this={...}` receives a setter that accepts `HTMLElement | HTMLElement[]`.
+
+

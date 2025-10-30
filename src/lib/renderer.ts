@@ -18,8 +18,14 @@ export const h = (
 ): JSX.Element => {
 	// Separate regular props from colon-grouped category props (e.g., "if:user")
 	const regularProps: Record<string, any> = {}
-	const collectedCategories: Record<string, Record<string, any>> = {}
+	const collectedCategories: Record<string, any> = {}
 	for (const [key, value] of Object.entries(props || {})) {
+		if (key === 'this') {
+			const setComponent = value?.set
+			if (typeof setComponent !== 'function') throw new Error('`this` attribute must be an L-value')
+			collectedCategories.this = setComponent
+			continue
+		}
 		const match = ['if', 'else', 'when'].includes(key)
 			? ['', key, '_']
 			: key.match(/^([^:]+):(.+)$/)
@@ -273,6 +279,10 @@ export function processChildren(children: Child[], scope: Record<PropertyKey, an
 				for (const [key, value] of Object.entries(renderer.when) as [string, any])
 					if (!scope[key](value)) return false
 			partial = renderer.render(scope)
+			// Handle `this` meta: allow `this:component` to receive the component mount object
+			if ('this' in renderer) {
+				renderer.this(partial)
+			}
 		}
 		if (!partial && typeof partial !== 'number') return
 		if (Array.isArray(partial)) return processChildren(partial, scope)

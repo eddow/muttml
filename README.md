@@ -4,6 +4,8 @@
 
 Pounce-TS is a minimal, performant framework for building reactive web applications. It combines the simplicity of direct DOM manipulation with the power of automatic reactivity, two-way binding, and component-based architecture.
 
+Redoing one was done to have something simple, who is simply reactive without hacks (`reactive(...)` is enough) and still keep a simple and intuitive way of describing relations with no need to have two names per state for example.
+
 ## 🌟 Features
 
 - **🚀 Lightweight**: No virtual DOM, minimal overhead

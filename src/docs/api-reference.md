@@ -195,6 +195,25 @@ trackEffect((obj, evolution) => {
 <input value={state.count} update:value={(v) => state.count = v} />
 ```
 
+### `this` (refs)
+
+Capture a reference to the rendered target.
+
+- For intrinsic DOM elements, the value is an `HTMLElement`.
+- For components, the value is usually an array of `HTMLElement` (component render output).
+
+The value passed to `this` must be an L‑value (a ref sink) that the renderer can set during render.
+
+```tsx
+const refs: Record<string, any> = {}
+
+// DOM element ref
+<input this={refs.input} value={state.sharedCount} />
+
+// Component ref (receives HTMLElement[])
+<CounterComponent this={refs.counter} count={state.sharedCount} />
+```
+
 ## Control Flow Components
 
 ### `<For each={array}>`
