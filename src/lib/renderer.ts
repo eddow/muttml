@@ -6,7 +6,7 @@ import { styles } from './styles'
 import { array, propsInto } from './utils'
 
 const logRender = (() => false)() ? console.log : () => {}
-export const rootScope = reactive({ _: true })
+export const rootScope = reactive(Object.create(null, { _: { value: true } }))
 
 /**
  * Custom h() function for JSX rendering - returns a mount function

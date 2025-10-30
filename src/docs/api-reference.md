@@ -214,6 +214,33 @@ const refs: Record<string, any> = {}
 <CounterComponent this={refs.counter} count={state.sharedCount} />
 ```
 
+### `use:name` (scope mixins)
+
+Attach a scope-provided mixin to the rendered target.
+
+- Define on scope: `scope.name(target: Node | Node[], value: any | undefined, scope)`
+- Use in JSX: `use:name={value}` (value optional)
+- May return a cleanup function.
+
+Example:
+
+```tsx
+// In component body
+scope.resize = (target, value, scope) => {
+  const el = Array.isArray(target) ? target[0] : target
+  if (!(el instanceof HTMLElement)) return
+  const ro = new ResizeObserver((entries) => {
+    const { width, height } = entries[0].contentRect
+    if (typeof value === 'function') value(Math.round(width), Math.round(height))
+  })
+  ro.observe(el)
+  return () => ro.disconnect()
+}
+
+// In JSX
+<div use:resize={(w: number, h: number) => console.log(w, h)} />
+```
+
 ## Control Flow Components
 
 ### `<For each={array}>`

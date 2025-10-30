@@ -15,9 +15,13 @@ function ResizeSandbox(_props: {}, scope: Record<PropertyKey, any>) {
 		if (!(element instanceof HTMLElement)) return
 		const observer = new ResizeObserver((entries) => {
 			const rect = entries[0].contentRect
-			size.width = Math.round(rect.width)
-			size.height = Math.round(rect.height)
-			if (typeof value === 'function') value(size.width, size.height)
+			const width = Math.round(rect.width)
+			const height = Math.round(rect.height)
+			if (typeof value === 'function') value(width, height)
+			else {
+				value.width = width
+				value.height = height
+			}
 		})
 		observer.observe(element)
 		return () => observer.disconnect()
@@ -28,10 +32,7 @@ function ResizeSandbox(_props: {}, scope: Record<PropertyKey, any>) {
 			<h3>Resize Sandbox</h3>
 			<div
 				style="resize: both; overflow: auto; border: 1px solid #ccc; padding: 8px; min-width: 120px; min-height: 80px;"
-				use:resize={(w: number, h: number) => {
-					size.width = w
-					size.height = h
-				}}
+				use:resize={size}
 			>
 				Resize me
 				<div style="margin-top: 8px; color: #555;">

@@ -1,6 +1,5 @@
 declare global {
-	// Global h function for JSX
-	const h: any
+	const h: (type: any, props?: any, ...children: any[]) => any
 	const Fragment: any
 	const Scope: (
 		props: { children?: any; [key: string]: any },
@@ -17,6 +16,7 @@ declare global {
 	// biome-ignore lint/suspicious/noConfusingVoidType: Void ends up automatically
 	type HTMLChild = Node | string | number | JSX.Element | void | false
 	namespace JSX {
+		type ScopeName = string
 		// Specify the property name used for JSX children
 		interface ElementChildrenAttribute {
 			children: any
@@ -27,14 +27,21 @@ declare global {
 		}
 		// Override the default JSX children handling
 		// Allow any children type so components can accept function-as-children
-		interface IntrinsicAttributes {
+		type IntrinsicAttributes = {
 			children?: any
 			// Meta: capture component reference on render
 			this?: Node | Node[]
-			[`if:${ScopeName}`]?: boolean
-			[`else:${ScopeName}`]?: boolean
-			[`when:${ScopeName}`]?: (value: any) => boolean
-			[`use:${ScopeName}`]?: any //(target: Node | Node[], value: any, scope: Record<PropertyKey, any>) => void
+			if?: boolean
+			else?: boolean
+			when?: (value: any) => boolean
+		} & {
+			[K in `use:${ScopeName}`]?: any
+		} & {
+			[K in `if:${ScopeName}`]?: boolean
+		} & {
+			[K in `else:${ScopeName}`]?: boolean
+		} & {
+			[K in `when:${ScopeName}`]?: (value: any) => boolean
 		}
 
 		// Custom class type for conditional classes
@@ -85,10 +92,8 @@ declare global {
 
 		// Base interface for common HTML attributes
 		type BaseHTMLAttributes = IntrinsicAttributes &
-			DefaultDirectiveProps &
-			AllNamedDirectiveProps &
 			GlobalHTMLAttributes &
-			MouseReactiveHTMLAttributes & {
+			MouseReactiveHTMLAttributes & { [K in `use:${string}`]?: any } & {
 				children?: HTMLChild | HTMLChild[]
 				// Additional common non-mouse events
 				onFocus?: (event: FocusEvent) => void
@@ -98,61 +103,73 @@ declare global {
 				onKeypress?: (event: KeyboardEvent) => void
 			}
 
+		interface InputNumber {
+			type: 'number' | 'range'
+			value?: number
+			min?: number
+			max?: number
+			step?: number
+			'update:value'?(value: number): void
+		}
+		interface InputString {
+			type?:
+				| 'text'
+				| 'password'
+				| 'email'
+				| 'tel'
+				| 'url'
+				| 'search'
+				| 'date'
+				| 'time'
+				| 'datetime-local'
+				| 'month'
+				| 'week'
+				| 'color'
+				| 'radio'
+				| 'file'
+				| 'hidden'
+				| 'submit'
+				| 'reset'
+				| 'button'
+			value?: string
+			'update:value'?(value: string): void
+		}
+		interface InputBoolean {
+			type: 'checkbox' | 'radio'
+			checked?: boolean
+			value?: string
+			'update:checked'?(value: boolean): void
+		}
 		interface IntrinsicElements {
 			// Form Elements
-			input: BaseHTMLAttributes & {
-				name?: string
-				type?:
-					| 'text'
-					| 'password'
-					| 'email'
-					| 'number'
-					| 'tel'
-					| 'url'
-					| 'search'
-					| 'date'
-					| 'time'
-					| 'datetime-local'
-					| 'month'
-					| 'week'
-					| 'color'
-					| 'checkbox'
-					| 'radio'
-					| 'file'
-					| 'hidden'
-					| 'submit'
-					| 'reset'
-					| 'button'
-					| 'range'
-				value?: string | number
-				checked?: boolean
-				'update:checked'?: (value: boolean) => void
-				'update:value'?: (value: string | number) => void
-				placeholder?: string
-				disabled?: boolean
-				required?: boolean
-				readonly?: boolean
-				min?: number | string
-				max?: number | string
-				step?: number | string
-				size?: number
-				multiple?: boolean
-				accept?: string
-				autocomplete?: string
-				autocorrect?: 'on' | 'off'
-				autocapitalize?: 'off' | 'none' | 'on' | 'sentences' | 'words' | 'characters'
-				spellcheck?: boolean | 'true' | 'false'
-				pattern?: string
-				maxlength?: number
-				minlength?: number
-				// Events
-				onInput?: (event: Event) => void
-				onChange?: (event: Event) => void
-				onSelect?: (event: Event) => void
-				onInvalid?: (event: Event) => void
-				onReset?: (event: Event) => void
-				onSearch?: (event: Event) => void
-			}
+			input: BaseHTMLAttributes &
+				(InputNumber | InputString | InputBoolean) & {
+					name?: string
+					placeholder?: string
+					disabled?: boolean
+					required?: boolean
+					readonly?: boolean
+					min?: number | string
+					max?: number | string
+					step?: number | string
+					size?: number
+					multiple?: boolean
+					accept?: string
+					autocomplete?: string
+					autocorrect?: 'on' | 'off'
+					autocapitalize?: 'off' | 'none' | 'on' | 'sentences' | 'words' | 'characters'
+					spellcheck?: boolean | 'true' | 'false'
+					pattern?: string
+					maxlength?: number
+					minlength?: number
+					// Events
+					onInput?: (event: Event) => void
+					onChange?: (event: Event) => void
+					onSelect?: (event: Event) => void
+					onInvalid?: (event: Event) => void
+					onReset?: (event: Event) => void
+					onSearch?: (event: Event) => void
+				}
 
 			textarea: BaseHTMLAttributes & {
 				value?: string
@@ -331,12 +348,7 @@ declare global {
 			}
 
 			// Common HTML attributes for all elements
-			[elemName: string]: BaseHTMLAttributes & {
-				// 2-way binding specific attributes
-				value?: any
-				checked?: boolean
-				selected?: boolean
-			}
+			[elemName: string]: BaseHTMLAttributes
 		}
 	}
 }

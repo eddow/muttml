@@ -59,6 +59,7 @@ const App = () => (
 				<h3>Regular DOM Element 2-Way Binding Test</h3>
 				<p>This input is bound to the same state as the counter:</p>
 				<input
+					type="number"
 					this={refs.input}
 					value={state.sharedCount}
 					style="padding: 8px; margin: 5px; border: 1px solid #ccc; border-radius: 4px;"
