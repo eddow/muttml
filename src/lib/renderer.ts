@@ -1,4 +1,4 @@
-import { atomic, computed, effect, reactive, unwrap } from 'mutts/src'
+import { activeEffect, atomic, computed, effect, reactive, unwrap } from 'mutts/src'
 import { classNames } from './classNames'
 import { namedEffect } from './debug'
 import { getComponent } from './registry'
@@ -6,6 +6,7 @@ import { array, propsInto } from './utils'
 
 const logRender = (() => false)() ? console.log : () => {}
 const rootScope = reactive({ _: true })
+
 /**
  * Custom h() function for JSX rendering - returns a mount function
  */
@@ -18,7 +19,7 @@ export const h = (
 	const regularProps: Record<string, any> = {}
 	const collectedCategories: Record<string, Record<string, any>> = {}
 	for (const [key, value] of Object.entries(props || {})) {
-		const match = ['if', 'strict', 'else', 'when'].includes(key)
+		const match = ['if', 'else', 'when'].includes(key)
 			? ['', key, '_']
 			: key.match(/^([^:]+):(.+)$/)
 		if (match) {
@@ -92,6 +93,7 @@ export const h = (
 				element.className = classNames(value)
 			}
 		} else if (typeof value === 'object' && value !== null && 'get' in value && 'set' in value) {
+			if (!activeEffect) debugger
 			// 2-way binding for regular elements (e.g., `value={{get: () => this.value, set: val => this.value = val}}`)
 			namedEffect(`prop:${key}`, () => {
 				element[key] = value.get()
@@ -161,13 +163,17 @@ export function Scope(
 	for (const [key, value] of Object.entries(props)) if (key !== 'children') scope[key] = value
 	return props.children
 }
-// Make h available globally
-Object.assign(globalThis, { h, Fragment: (props: { children: Child[] }) => props.children, Scope })
+export function For<T>(props: { each: T[]; children: (item: T, index?: number) => JSX.Element }) {
+	const body = Array.isArray(props.children) ? props.children[0] : props.children
+	const cb = body()
+	return computed.memo(props.each, (item) => cb(item))
+}
+export const Fragment = (props: { children: Child[] }) => props.children
 
 export function bindChildren(parent: Node, newChildren: Node | Node[] | undefined) {
-	effect(function redraw() {
+	return effect(function redraw() {
 		// Replace children
-		logRender('%creconcileChildren', 'color: red; font-weight: bold;', parent, newChildren)
+		logRender('%c reconcileChildren', 'color: red; font-weight: bold;', parent, newChildren)
 		// No need to precompute oldChildren as an array; work with live DOM
 		let newIndex = 0
 		if (!newChildren) newChildren = []
@@ -241,28 +247,19 @@ export function processChildren(children: Child[], scope: Record<PropertyKey, an
 		let partial: any = renderer
 		if (renderer && typeof renderer === 'object' && 'render' in renderer) {
 			function lax(given: any, to: any) {
-				return (
-					(to === true && !!given) ||
-					(to === false && !given) ||
-					// biome-ignore lint/suspicious/noDoubleEquals: use `strict` for strict equality
-					to == given
-				)
-			}
-			function evaluate(prop: (() => any) | { get: () => any }) {
-				return typeof prop === 'function' ? computed(prop) : computed(prop.get)
+				if (to === true) return !!given
+				const compared = computed(to.get ?? to)
+				return given === compared
 			}
 			if ('if' in renderer)
 				for (const [key, value] of Object.entries(renderer.if) as [string, any])
-					if (!lax(scope[key], evaluate(value))) return false
-			if ('strict' in renderer)
-				for (const [key, value] of Object.entries(renderer.strict) as [string, any])
-					if (scope[key] !== evaluate(value)) return false
+					if (!lax(scope[key], value)) return false
 			if ('else' in renderer)
 				for (const [key, value] of Object.entries(renderer.else) as [string, any])
-					if (lax(scope[key], evaluate(value))) return false
+					if (lax(scope[key], value)) return false
 			if ('when' in renderer)
 				for (const [key, value] of Object.entries(renderer.when) as [string, any])
-					if (!scope[key](evaluate(value))) return false
+					if (!scope[key](value)) return false
 			partial = renderer.render(scope)
 		}
 		if (!partial && typeof partial !== 'number') return

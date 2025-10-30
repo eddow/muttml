@@ -1,5 +1,3 @@
-import { attributesSymbol } from '../lib/component'
-
 declare global {
 	// Global h function for JSX
 	const h: any
@@ -8,24 +6,27 @@ declare global {
 		props: { children?: any; [key: string]: any },
 		scope: Record<PropertyKey, any>
 	) => JSX.Element
+	const For: <T>(props: {
+		each: T[] | (() => T[])
+		children: (item: T) => JSX.Element
+	}) => JSX.Element
 	type ComponentFunction = (
 		props: any,
 		scope: Record<PropertyKey, any>
 	) => JSX.Element | JSX.Element[]
+	// biome-ignore lint/suspicious/noConfusingVoidType: Void ends up automatically
+	type HTMLChild = Node | string | number | JSX.Element | void | false
 	namespace JSX {
+		// Specify the property name used for JSX children
+		interface ElementChildrenAttribute {
+			children: any
+		}
 		type Element = { render(scope?: Record<PropertyKey, any>): Node[] }
 		interface ElementClass {
 			template: any
 		}
-		interface ElementAttributesProperty {
-			//TODO: This symbol does not exist anymore but the include of the nonexisting file is needed
-			[attributesSymbol]: any
-		}
-		interface ElementChildrenAttribute {
-			children: any
-		}
 
-		// Scope-aware directive typings (if/strict/else/when)
+		// Scope-aware directive typings (if/else/when)
 		// Consumers can augment this interface to provide strong types per scope name.
 		// The '_' key represents the default scope used by bare directives like `if={(v)=>...}`.
 		interface JSXScopeTypes {
@@ -33,7 +34,7 @@ declare global {
 			[name: string]: any
 		}
 
-		type DirectivePrefix = 'if' | 'strict' | 'else' | 'when'
+		type DirectivePrefix = 'if' | 'else' | 'when'
 
 		type DirectivePredicate<Value> = (value: Value) => boolean
 
@@ -56,6 +57,7 @@ declare global {
 			[SN in keyof JSXScopeTypes & string]: NamedDirectivePropsForScope<SN>
 		}[keyof JSXScopeTypes & string]
 		// Override the default JSX children handling
+		// Allow any children type so components can accept function-as-children
 		interface IntrinsicAttributes {
 			children?: any
 		}
@@ -63,46 +65,57 @@ declare global {
 		// Custom class type for conditional classes
 		type ClassValue = string | ClassValue[] | Record<string, boolean> | null | undefined
 
+		// Common, reusable HTML attributes shared by most elements
+		type GlobalHTMLAttributes = {
+			// Global attributes
+			id?: string
+			class?: ClassValue
+			style?: string | Record<string, string | number>
+			title?: string
+			lang?: string
+			dir?: 'ltr' | 'rtl' | 'auto'
+			hidden?: boolean
+			tabindex?: number
+			accesskey?: string
+			contenteditable?: boolean | 'true' | 'false' | 'inherit'
+			spellcheck?: boolean | 'true' | 'false'
+			translate?: 'yes' | 'no'
+			autocapitalize?: 'off' | 'none' | 'on' | 'sentences' | 'words' | 'characters'
+			autocorrect?: 'on' | 'off'
+			autocomplete?: string
+			enterkeyhint?: 'enter' | 'done' | 'go' | 'next' | 'previous' | 'search' | 'send'
+			inputmode?: 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search'
+			is?: string
+			itemid?: string
+			itemprop?: string
+			itemref?: string
+			itemscope?: boolean
+			itemtype?: string
+			role?: string
+		}
+
+		// Reusable mouse event handlers for DOM elements
+		type MouseReactiveHTMLAttributes = {
+			onClick?: (event: MouseEvent) => void
+			onMousedown?: (event: MouseEvent) => void
+			onMouseup?: (event: MouseEvent) => void
+			onMouseover?: (event: MouseEvent) => void
+			onMouseout?: (event: MouseEvent) => void
+			onMouseenter?: (event: MouseEvent) => void
+			onMouseleave?: (event: MouseEvent) => void
+			onMousemove?: (event: MouseEvent) => void
+			onContextmenu?: (event: MouseEvent) => void
+			onDblclick?: (event: MouseEvent) => void
+		}
+
 		// Base interface for common HTML attributes
 		type BaseHTMLAttributes = IntrinsicAttributes &
 			DefaultDirectiveProps &
-			AllNamedDirectiveProps & {
-				// Global attributes
-				id?: string
-				class?: ClassValue
-				style?: string | Record<string, string | number>
-				title?: string
-				lang?: string
-				dir?: 'ltr' | 'rtl' | 'auto'
-				hidden?: boolean
-				tabindex?: number
-				accesskey?: string
-				contenteditable?: boolean | 'true' | 'false' | 'inherit'
-				spellcheck?: boolean | 'true' | 'false'
-				translate?: 'yes' | 'no'
-				autocapitalize?: 'off' | 'none' | 'on' | 'sentences' | 'words' | 'characters'
-				autocorrect?: 'on' | 'off'
-				autocomplete?: string
-				enterkeyhint?: 'enter' | 'done' | 'go' | 'next' | 'previous' | 'search' | 'send'
-				inputmode?: 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search'
-				is?: string
-				itemid?: string
-				itemprop?: string
-				itemref?: string
-				itemscope?: boolean
-				itemtype?: string
-				role?: string
-				// Common events for all elements
-				onClick?: (event: MouseEvent) => void
-				onMousedown?: (event: MouseEvent) => void
-				onMouseup?: (event: MouseEvent) => void
-				onMouseover?: (event: MouseEvent) => void
-				onMouseout?: (event: MouseEvent) => void
-				onMouseenter?: (event: MouseEvent) => void
-				onMouseleave?: (event: MouseEvent) => void
-				onMousemove?: (event: MouseEvent) => void
-				onContextmenu?: (event: MouseEvent) => void
-				onDblclick?: (event: MouseEvent) => void
+			AllNamedDirectiveProps &
+			GlobalHTMLAttributes &
+			MouseReactiveHTMLAttributes & {
+				children?: HTMLChild | HTMLChild[]
+				// Additional common non-mouse events
 				onFocus?: (event: FocusEvent) => void
 				onBlur?: (event: FocusEvent) => void
 				onKeydown?: (event: KeyboardEvent) => void
@@ -111,10 +124,6 @@ declare global {
 			}
 
 		interface IntrinsicElements {
-			for: {
-				each: any[]
-				children: (item: any, index?: number) => JSX.Element
-			}
 			// Form Elements
 			input: BaseHTMLAttributes & {
 				type?:
@@ -163,11 +172,6 @@ declare global {
 				// Events
 				onInput?: (event: Event) => void
 				onChange?: (event: Event) => void
-				onFocus?: (event: FocusEvent) => void
-				onBlur?: (event: FocusEvent) => void
-				onKeydown?: (event: KeyboardEvent) => void
-				onKeyup?: (event: KeyboardEvent) => void
-				onKeypress?: (event: KeyboardEvent) => void
 				onSelect?: (event: Event) => void
 				onInvalid?: (event: Event) => void
 				onReset?: (event: Event) => void
@@ -192,11 +196,6 @@ declare global {
 				// Events
 				onInput?: (event: Event) => void
 				onChange?: (event: Event) => void
-				onFocus?: (event: FocusEvent) => void
-				onBlur?: (event: FocusEvent) => void
-				onKeydown?: (event: KeyboardEvent) => void
-				onKeyup?: (event: KeyboardEvent) => void
-				onKeypress?: (event: KeyboardEvent) => void
 				onSelect?: (event: Event) => void
 				onInvalid?: (event: Event) => void
 			}
@@ -210,11 +209,6 @@ declare global {
 				autocomplete?: string
 				// Events
 				onChange?: (event: Event) => void
-				onFocus?: (event: FocusEvent) => void
-				onBlur?: (event: FocusEvent) => void
-				onKeydown?: (event: KeyboardEvent) => void
-				onKeyup?: (event: KeyboardEvent) => void
-				onKeypress?: (event: KeyboardEvent) => void
 				onSelect?: (event: Event) => void
 				onInvalid?: (event: Event) => void
 			}
@@ -231,23 +225,6 @@ declare global {
 				formtarget?: string
 				name?: string
 				value?: string
-				// Events
-				onClick?: (event: MouseEvent) => void
-				onMousedown?: (event: MouseEvent) => void
-				onMouseup?: (event: MouseEvent) => void
-				onMouseover?: (event: MouseEvent) => void
-				onMouseout?: (event: MouseEvent) => void
-				onMouseenter?: (event: MouseEvent) => void
-				onMouseleave?: (event: MouseEvent) => void
-				onMousemove?: (event: MouseEvent) => void
-				onContextmenu?: (event: MouseEvent) => void
-				onDblclick?: (event: MouseEvent) => void
-				onFocus?: (event: FocusEvent) => void
-				onBlur?: (event: FocusEvent) => void
-				onKeydown?: (event: KeyboardEvent) => void
-				onKeyup?: (event: KeyboardEvent) => void
-				onKeypress?: (event: KeyboardEvent) => void
-				onInvalid?: (event: Event) => void
 			}
 
 			form: BaseHTMLAttributes & {
@@ -269,49 +246,15 @@ declare global {
 			label: BaseHTMLAttributes & {
 				htmlFor?: string
 				form?: string
-				// Events
-				onClick?: (event: MouseEvent) => void
-				onMousedown?: (event: MouseEvent) => void
-				onMouseup?: (event: MouseEvent) => void
-				onMouseover?: (event: MouseEvent) => void
-				onMouseout?: (event: MouseEvent) => void
-				onMouseenter?: (event: MouseEvent) => void
-				onMouseleave?: (event: MouseEvent) => void
-				onMousemove?: (event: MouseEvent) => void
-				onContextmenu?: (event: MouseEvent) => void
-				onDblclick?: (event: MouseEvent) => void
 			}
 
 			fieldset: BaseHTMLAttributes & {
 				disabled?: boolean
 				form?: string
 				name?: string
-				// Events
-				onClick?: (event: MouseEvent) => void
-				onMousedown?: (event: MouseEvent) => void
-				onMouseup?: (event: MouseEvent) => void
-				onMouseover?: (event: MouseEvent) => void
-				onMouseout?: (event: MouseEvent) => void
-				onMouseenter?: (event: MouseEvent) => void
-				onMouseleave?: (event: MouseEvent) => void
-				onMousemove?: (event: MouseEvent) => void
-				onContextmenu?: (event: MouseEvent) => void
-				onDblclick?: (event: MouseEvent) => void
 			}
 
-			legend: BaseHTMLAttributes & {
-				// Events
-				onClick?: (event: MouseEvent) => void
-				onMousedown?: (event: MouseEvent) => void
-				onMouseup?: (event: MouseEvent) => void
-				onMouseover?: (event: MouseEvent) => void
-				onMouseout?: (event: MouseEvent) => void
-				onMouseenter?: (event: MouseEvent) => void
-				onMouseleave?: (event: MouseEvent) => void
-				onMousemove?: (event: MouseEvent) => void
-				onContextmenu?: (event: MouseEvent) => void
-				onDblclick?: (event: MouseEvent) => void
-			}
+			legend: BaseHTMLAttributes & {}
 
 			// Media Elements
 			img: BaseHTMLAttributes & {
@@ -409,17 +352,6 @@ declare global {
 				hreflang?: string
 				type?: string
 				referrerpolicy?: string
-				// Events
-				onClick?: (event: MouseEvent) => void
-				onMousedown?: (event: MouseEvent) => void
-				onMouseup?: (event: MouseEvent) => void
-				onMouseover?: (event: MouseEvent) => void
-				onMouseout?: (event: MouseEvent) => void
-				onMouseenter?: (event: MouseEvent) => void
-				onMouseleave?: (event: MouseEvent) => void
-				onMousemove?: (event: MouseEvent) => void
-				onContextmenu?: (event: MouseEvent) => void
-				onDblclick?: (event: MouseEvent) => void
 			}
 
 			// Common HTML attributes for all elements
@@ -432,3 +364,4 @@ declare global {
 		}
 	}
 }
+export {}

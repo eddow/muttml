@@ -6,7 +6,7 @@ import { reactive } from 'mutts/src'
 import CounterComponent from './components/Counter'
 import TodoComponent from './components/Todo'
 import WrapperComponent from './components/Wrapper'
-import { bindChildren } from './lib/renderer'
+import { bindApp } from './lib'
 
 // Create a reactive state for 2-way binding demo
 const state = reactive({
@@ -17,7 +17,7 @@ const state = reactive({
 // biome-ignore lint/style/useConst: set in the props
 let todos = reactive([])
 // Build the app virtual tree and render to a DocumentFragment
-const app = (
+const app = ()=> (
 	<>
 		<div>
 			<div style="text-align: center; margin-bottom: 30px;">
@@ -85,15 +85,7 @@ const app = (
 			</WrapperComponent>
 		</div>
 	</>
-).render()
+)
 
-// Initialize the app like mini.tsx by reconciling into #app
-document.addEventListener('DOMContentLoaded', () => {
-	const appElement = document.getElementById('app')
-
-	if (!appElement) {
-		console.error('App container not found')
-		return
-	}
-	bindChildren(appElement, app)
-})
+// Initialize the app using the automated bindApp helper
+bindApp(app, '#app')

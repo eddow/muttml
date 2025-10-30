@@ -2,7 +2,7 @@
  * Todo Web Component using inline JSX templating
  */
 
-import { computed, effect, trackEffect } from 'mutts/src'
+import { effect, trackEffect } from 'mutts/src'
 import './Todo.scss'
 import { array, compute, defaulted } from '../lib/utils'
 import { Scope } from './controlFlow'
@@ -130,34 +130,25 @@ export default function TodoWebComponent(
 			</div>
 
 			{/* Todo list */}
-			<div class="todo-list">
-				{filteredTodos().length === 0 ? (
-					<div class="empty-message">
-						{state.todos.length === 0
-							? 'No todos yet. Add one above!'
-							: `No ${state.filter} todos.`}
-					</div>
-				) : (
-					computed.memo(filteredTodos, (todo) => (
-						<div class="todo-item">
-							{console.log('render', todo.text)}
-							<input type="checkbox" checked={todo.completed} />
-							<span class={['todo-text', { completed: todo.completed }]}>{todo.text}</span>
-							<button class="delete-button" onClick={() => deleteTodo(todo.id)}>
-								Delete
-							</button>
-						</div>
-					))
-				)}
-			</div>
-			<for each={filteredTodos()}>
-				{(todo: Todo) => (
-					<div class="todo-item">
-						<input type="checkbox" checked={todo.completed} />
-						<span class={['todo-text', { completed: todo.completed }]}>{todo.text}</span>
-					</div>
-				)}
-			</for>
+			<Scope _={filteredTodos().length > 0}>
+				<div if class="todo-list">
+					<For each={filteredTodos}>
+						{(todo) => (
+							<div class="todo-item">
+								{console.log('render', todo.text)}
+								<input type="checkbox" checked={todo.completed} />
+								<span class={['todo-text', { completed: todo.completed }]}>{todo.text}</span>
+								<button class="delete-button" onClick={() => deleteTodo(todo.id)}>
+									Delete
+								</button>
+							</div>
+						)}
+					</For>
+				</div>
+				<div else class="empty-message">
+					{state.todos.length === 0 ? 'No todos yet. Add one above!' : `No ${state.filter} todos.`}
+				</div>
+			</Scope>
 
 			{/* Clear completed section */}
 			<Scope>

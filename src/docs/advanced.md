@@ -1,0 +1,411 @@
+# Advanced Features
+
+This guide covers advanced features and patterns in Pounce-TS.
+
+## Conditional Rendering
+
+Pounce-TS supports several conditional rendering patterns using scoped properties.
+
+### if Conditions
+
+Use `if:` props to conditionally render elements based on scope variables:
+
+```tsx
+function App() {
+  const state = reactive({ isLoggedIn: false })
+  
+  return (
+    <>
+      <div>Always visible</div>
+      <div if:user={state.isLoggedIn}>Only when logged in</div>
+      <div if:user={false}>Never shown</div>
+    </>
+  )
+}
+```
+
+### else Conditions
+
+Use `else:` to render when a condition is false:
+
+```tsx
+<div if:user={true}>Logged in</div>
+<div else:user={true}>Logged out</div>
+```
+
+### when Conditions
+
+Use `when:` with functions for custom logic:
+
+```tsx
+<div when:count={(c) => c > 10}>Count is greater than 10</div>
+```
+
+## Scope Management
+
+The `Scope` component provides a way to share data across a component tree:
+
+```tsx
+import { Scope } from '../lib/renderer'
+
+function App() {
+  return (
+    <Scope user="Alice" role="admin">
+      <UserInfo />
+      <AdminPanel />
+    </Scope>
+  )
+}
+
+function UserInfo(props: any, scope: Record<PropertyKey, any>) {
+  return <p>User: {scope.user}</p>
+}
+
+function AdminPanel(props: any, scope: Record<PropertyKey, any>) {
+  return (
+    <div if:role={'admin'}>
+      <p>Admin Panel (visible to {scope.user})</p>
+    </div>
+  )
+}
+```
+
+## Control Flow Components
+
+### for Loops
+
+Use the `<for>` component for reactive iteration:
+
+```tsx
+function TodoList() {
+  const todos = reactive([
+    { id: 1, text: 'Task 1' },
+    { id: 2, text: 'Task 2' }
+  ])
+  
+  return (
+    <div>
+      <for each={todos}>
+        {(todo) => (
+          <div key={todo.id}>
+            {todo.text}
+          </div>
+        )}
+      </for>
+    </div>
+  )
+}
+```
+
+### Fragments
+
+Use JSX fragments for multiple root elements:
+
+```tsx
+function List() {
+  return (
+    <>
+      <li>Item 1</li>
+      <li>Item 2</li>
+      <li>Item 3</li>
+    </>
+  )
+}
+```
+
+## Styling
+
+### Inline Styles
+
+Use the `style` attribute for inline styles:
+
+```tsx
+<div style="color: red; font-size: 16px;">Styled text</div>
+
+// Or with reactive style
+<div style={() => `color: ${state.color};`}>Dynamic style</div>
+```
+
+### CSS Classes
+
+Use the `class` attribute for CSS classes:
+
+```tsx
+// Simple class
+<div class="container">Content</div>
+
+// Multiple classes
+<div class="container active">Content</div>
+
+// Conditional classes
+<div class={['container', { active: state.isActive }]}>Content</div>
+
+// Reactive classes
+<div class={() => state.isActive ? 'active' : 'inactive'}>Content</div>
+```
+
+Use the `classNames` utility for complex class logic:
+
+```tsx
+import { classNames } from '../lib/classNames'
+
+function Button(props: { active: boolean; disabled: boolean }) {
+  const classes = classNames({
+    'btn': true,
+    'btn-active': props.active,
+    'btn-disabled': props.disabled
+  })
+  
+  return <button class={classes}>Click me</button>
+}
+```
+
+### CSS Modules / SCSS
+
+Import stylesheets directly in your components:
+
+```tsx
+import './MyComponent.scss'
+
+function MyComponent() {
+  return <div class="my-component">Styled component</div>
+}
+```
+
+## Debug Mode
+
+Enable debug mode to see reactive changes:
+
+```tsx
+import { debug, trackEffect } from '../lib/debug'
+
+function MyComponent() {
+  trackEffect((obj, evolution) => {
+    console.log('State changed:', obj, evolution)
+  })
+  
+  return <div>My Component</div>
+}
+```
+
+## Component Registry
+
+Register components for custom element names:
+
+```tsx
+import { registerComponent } from '../lib/registry'
+
+function MyButton() {
+  return <button>Click me</button>
+}
+
+registerComponent('my-button', MyButton)
+
+// Use as custom element
+function App() {
+  return <my-button>Click me</my-button>
+}
+```
+
+## Props Handling
+
+### Props with Functions
+
+Props can be functions or get/set objects:
+
+```tsx
+function Input(props: { 
+  value: string | (() => string) | { get: () => string; set: (v: string) => void }
+}) {
+  return <input value={props.value} />
+}
+
+// Usage
+const state = reactive({ text: 'Hello' })
+
+// Reactive prop
+<Input value={() => state.text} />
+
+// Two-way binding
+<Input value={state.text} />
+```
+
+### Dynamic Props
+
+Pass dynamic props to components:
+
+```tsx
+function DynamicComponent(props: Record<string, any>) {
+  return (
+    <div {...props}>
+      Content
+    </div>
+  )
+}
+```
+
+## Performance Optimization
+
+### Memoization
+
+Use `computed.memo` for expensive calculations:
+
+```tsx
+import { computed } from 'mutts/src'
+
+function ExpensiveList(props: { items: Item[] }) {
+  const processed = computed.memo(props.items, (item) => {
+    // Expensive computation
+    return expensiveProcess(item)
+  })
+  
+  return (
+    <div>
+      {processed.map(item => <div>{item.result}</div>)}
+    </div>
+  )
+}
+```
+
+### Manual Re-rendering Control
+
+Use `effect` for fine-grained control:
+
+```tsx
+import { effect, reactive } from 'mutts/src'
+
+function ControlledComponent() {
+  const shouldUpdate = reactive({ value: true })
+  
+  effect(() => {
+    if (!shouldUpdate.value) return
+    // Update logic
+  })
+  
+  return <div>Component</div>
+}
+```
+
+## Custom Hooks Pattern
+
+Create reusable logic:
+
+```tsx
+function useCounter(initialValue: number = 0) {
+  const state = reactive({ count: initialValue })
+  
+  function increment() { state.count++ }
+  function decrement() { state.count-- }
+  function reset() { state.count = initialValue }
+  
+  return { state, increment, decrement, reset }
+}
+
+function MyCounter() {
+  const { state, increment, decrement, reset } = useCounter(10)
+  
+  return (
+    <div>
+      <p>Count: {state.count}</p>
+      <button onClick={increment}>+</button>
+      <button onClick={decrement}>-</button>
+      <button onClick={reset}>Reset</button>
+    </div>
+  )
+}
+```
+
+## Event Handling
+
+### Custom Events
+
+Emit custom events from components:
+
+```tsx
+function MyComponent() {
+  function handleClick() {
+    // Emit custom event
+    window.dispatchEvent(new CustomEvent('myevent', { 
+      detail: { data: 'value' } 
+    }))
+  }
+  
+  return <button onClick={handleClick}>Click</button>
+}
+
+// Listen for event
+window.addEventListener('myevent', (e) => {
+  console.log(e.detail)
+})
+```
+
+### Event Delegation
+
+Use event delegation for dynamic lists:
+
+```tsx
+function DynamicList(props: { items: Item[] }) {
+  function handleClick(e: MouseEvent) {
+    const target = e.target as HTMLElement
+    const itemId = target.dataset.id
+    // Handle click
+  }
+  
+  return (
+    <div onClick={handleClick}>
+      {props.items.map(item => (
+        <div key={item.id} data-id={item.id}>
+          {item.text}
+        </div>
+      ))}
+    </div>
+  )
+}
+```
+
+## Type Safety
+
+### Strict TypeScript
+
+Use strict TypeScript settings:
+
+```json
+{
+  "compilerOptions": {
+    "strict": true,
+    "noImplicitAny": true,
+    "strictNullChecks": true
+  }
+}
+```
+
+### Type Guards
+
+Use type guards for runtime type checking:
+
+```tsx
+function isTodo(obj: any): obj is Todo {
+  return obj && typeof obj.id === 'number' && typeof obj.text === 'string'
+}
+
+function processItem(item: any) {
+  if (isTodo(item)) {
+    // TypeScript knows item is Todo
+    return item.text
+  }
+  return ''
+}
+```
+
+## Best Practices
+
+1. **Use Scope for context**: Share data without prop drilling
+2. **Memoize expensive computations**: Use `computed.memo` for performance
+3. **Keep components focused**: Single responsibility principle
+4. **Use TypeScript strictly**: Enable strict mode for better type safety
+5. **Handle edge cases**: Always validate props and state
+6. **Clean up effects**: Return cleanup functions to prevent memory leaks
+7. **Use debug mode during development**: Track reactive changes
+8. **Optimize re-renders**: Only update what's necessary
+
+

@@ -3,7 +3,7 @@
  */
 
 import { computed, effect, reactive, trackEffect } from 'mutts/src'
-import { bindChildren } from './lib/renderer'
+import { bindApp } from './lib'
 import { defaulted } from './lib/utils'
 
 function MiniCounter(
@@ -53,22 +53,14 @@ const state = reactive({
 	list: [] as string[],
 })
 // Add components using PascalCase JSX with children
-const app = (
+const app = ()=> (
 	<>
 		<div>
 			List: <span>{state.list.join(', ')}</span>
 		</div>
 		<MiniCounter list={state.list} />
 	</>
-).render()
+)
 
-// Initialize the app
-document.addEventListener('DOMContentLoaded', () => {
-	const appElement = document.getElementById('mini')
-
-	if (!appElement) {
-		console.error('App container not found')
-		return
-	}
-	bindChildren(appElement, app)
-})
+// Initialize the app using the automated bindApp helper
+bindApp(app, '#mini')
