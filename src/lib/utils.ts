@@ -26,7 +26,7 @@ export function overridden<T extends Record<PropertyKey, any>, D extends Partial
 ): Defaulted<T, D> {
 	return new Proxy(value, {
 		get(target, key) {
-			return key in overrides ?overrides[key as keyof D]: target[key]
+			return key in overrides ? overrides[key as keyof D] : target[key]
 		},
 		set(target, key, value) {
 			target[key as keyof T] = value
@@ -51,17 +51,20 @@ export function propsInto<P extends Record<string, any>, S extends Record<string
 	for (const [key, value] of Object.entries(props || {})) {
 		if (key !== 'style' && !(key in into)) {
 			// Check for 2-way binding object {get:, set:}
+			// Properties must be configurable as the proxy might return a reactive version of it
 			if (typeof value === 'object' && value !== null && 'get' in value && 'set' in value) {
 				Object.defineProperty(into, key, {
 					get: () => computed(value.get),
 					set: (newValue) => value.set(newValue),
 					enumerable: true,
+					configurable: true,
 				})
 			} else if (typeof value === 'function') {
 				// One-way binding
 				Object.defineProperty(into, key, {
 					get: () => computed(value),
 					enumerable: true,
+					configurable: true,
 				})
 			} else {
 				// Static value
@@ -69,6 +72,7 @@ export function propsInto<P extends Record<string, any>, S extends Record<string
 					value: value,
 					enumerable: true,
 					writable: false,
+					configurable: true,
 				})
 			}
 		}
