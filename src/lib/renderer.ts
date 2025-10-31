@@ -1,7 +1,6 @@
 import { atomic, computed, effect, reactive, unwrap } from 'mutts/src'
 import { classNames } from './classNames'
 import { namedEffect } from './debug'
-import { getComponent } from './registry'
 import { styles } from './styles'
 import { array, propsInto } from './utils'
 
@@ -26,7 +25,7 @@ export const h = (
 			collectedCategories.this = setComponent
 			continue
 		}
-		const match = ['if', 'else', 'when', 'use'].includes(key)
+		const match = ['if', 'else', 'when'].includes(key)
 			? ['', key, '_']
 			: key.match(/^([^:]+):(.+)$/)
 		if (match) {
@@ -37,19 +36,9 @@ export const h = (
 			regularProps[key] = value
 		}
 	}
-	// Get component constructor - either direct class or from registry
-	let componentCtor: any = null
-
+	// If we were given a component function directly, render it
 	if (typeof tag === 'function') {
-		// Direct component class (PascalCase)
-		componentCtor = tag
-	} else if (typeof tag === 'string' && getComponent(tag)) {
-		// Registered component
-		componentCtor = getComponent(tag)!
-	}
-
-	// If we have a component, return mount function
-	if (componentCtor) {
+		const componentCtor = tag
 		// Effect for styles - only updates style container
 		const mountObject: any = {
 			render(scope: Record<PropertyKey, any> = rootScope) {
@@ -77,6 +66,10 @@ export const h = (
 		if (typeof props.type !== 'string')
 			console.warn('input type must be a constant string', props.type)
 	}
+	function setAttribute(key: string, value: any) {
+		if (value === undefined || value === false) element.removeAttribute(key.toLowerCase())
+		else element.setAttribute(key.toLowerCase(), String(value))
+	}
 	// Set properties
 	for (const [key, value] of Object.entries(regularProps || {})) {
 		if (key === 'children') continue // Skip children, we'll handle them separately
@@ -85,7 +78,9 @@ export const h = (
 			// Event handler
 			const eventType = key.slice(2).toLowerCase()
 			namedEffect(`event:${key}`, () => {
-				const registeredEvent = atomic(value.get?.() ?? value())
+				const handlerCandidate = value.get ? value.get() : value()
+				if (handlerCandidate === undefined) return
+				const registeredEvent = atomic(handlerCandidate)
 				element.addEventListener(eventType, registeredEvent)
 				return () => element.removeEventListener(eventType, registeredEvent)
 			})
@@ -115,7 +110,7 @@ export const h = (
 		} else if (typeof value === 'object' && value !== null && 'get' in value && 'set' in value) {
 			// 2-way binding for regular elements (e.g., `value={{get: () => this.value, set: val => this.value = val}}`)
 			namedEffect(`prop:${key}`, () => {
-				element[key] = value.get()
+				setAttribute(key, value.get())
 			})
 			if (tag === 'input') {
 				switch (element.type) {
@@ -143,13 +138,13 @@ export const h = (
 		} else if (typeof value === 'function') {
 			// Reactive prop (e.g., `prop={() => this.counter}`)
 			namedEffect(`prop:${key}`, () => {
-				element[key] = value()
+				setAttribute(key, value())
 			})
 		} else if (key === 'innerHTML') {
-			element.innerHTML = String(value)
+			if (value !== undefined) element.innerHTML = String(value)
 		} else {
 			// Regular attribute
-			element.setAttribute(key, String(value))
+			setAttribute(key, value)
 		}
 	}
 

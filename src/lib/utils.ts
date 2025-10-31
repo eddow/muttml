@@ -12,7 +12,21 @@ export function defaulted<T extends Record<PropertyKey, any>, D extends Partial<
 ): Defaulted<T, D> {
 	return new Proxy(value, {
 		get(target, key) {
-			return target[key] ?? defaultValue[key as keyof D]
+			return key in target ? target[key] : defaultValue[key as keyof D]
+		},
+		set(target, key, value) {
+			target[key as keyof T] = value
+			return true
+		},
+	}) as unknown as Defaulted<T, D>
+}
+export function overridden<T extends Record<PropertyKey, any>, D extends Partial<AllOptional<T>>>(
+	value: T,
+	overrides: D
+): Defaulted<T, D> {
+	return new Proxy(value, {
+		get(target, key) {
+			return key in overrides ?overrides[key as keyof D]: target[key]
 		},
 		set(target, key, value) {
 			target[key as keyof T] = value
@@ -94,4 +108,8 @@ export const array = {
 		}
 		return false
 	},
+}
+
+export function isElement(value: any): value is JSX.Element {
+	return value && typeof value === 'object' && 'render' in value
 }

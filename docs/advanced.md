@@ -269,25 +269,6 @@ function MyComponent() {
 }
 ```
 
-## Component Registry
-
-Register components for custom element names:
-
-```tsx
-import { registerComponent } from '../lib/registry'
-
-function MyButton() {
-  return <button>Click me</button>
-}
-
-registerComponent('my-button', MyButton)
-
-// Use as custom element
-function App() {
-  return <my-button>Click me</my-button>
-}
-```
-
 ## Props Handling
 
 ### Props with Functions

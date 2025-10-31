@@ -44,40 +44,6 @@ The JSX pragma function that creates JSX elements. Automatically transforms JSX 
 
 **Returns:** JSX element object with `.render()` method
 
-## Component Registration
-
-### `registerComponent(tagName, ctor)`
-
-Register a component for use with a custom tag name.
-
-**Parameters:**
-- `tagName` - The custom tag name (e.g., 'my-button')
-- `ctor` - Component constructor function
-
-**Example:**
-```tsx
-registerComponent('my-button', MyButton)
-// Now use as: <my-button>Click</my-button>
-```
-
-### `getComponent(tagName)`
-
-Get a registered component by tag name.
-
-**Parameters:**
-- `tagName` - The custom tag name
-
-**Returns:** Component constructor or undefined
-
-### `hasComponent(tagName)`
-
-Check if a component is registered.
-
-**Parameters:**
-- `tagName` - The custom tag name
-
-**Returns:** Boolean
-
 ## Utility Functions
 
 ### `defaulted(value, defaults)`

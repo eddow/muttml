@@ -1,3 +1,5 @@
+import type { StyleInput } from '@/lib/styles'
+
 declare global {
 	const h: (type: any, props?: any, ...children: any[]) => any
 	const Fragment: any
@@ -52,27 +54,27 @@ declare global {
 			// Global attributes
 			id?: string
 			class?: ClassValue
-			style?: string | Record<string, string | number>
+			style?: string | StyleInput
 			title?: string
 			lang?: string
 			dir?: 'ltr' | 'rtl' | 'auto'
 			hidden?: boolean
-			tabindex?: number
-			accesskey?: string
-			contenteditable?: boolean | 'true' | 'false' | 'inherit'
-			spellcheck?: boolean | 'true' | 'false'
+			tabIndex?: number
+			accessKey?: string
+			contentEditable?: boolean | 'true' | 'false' | 'inherit'
+			spellCheck?: boolean | 'true' | 'false'
 			translate?: 'yes' | 'no'
-			autocapitalize?: 'off' | 'none' | 'on' | 'sentences' | 'words' | 'characters'
-			autocorrect?: 'on' | 'off'
-			autocomplete?: string
-			enterkeyhint?: 'enter' | 'done' | 'go' | 'next' | 'previous' | 'search' | 'send'
-			inputmode?: 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search'
+			autoCapitalize?: 'off' | 'none' | 'on' | 'sentences' | 'words' | 'characters'
+			autoCorrect?: 'on' | 'off'
+			autoComplete?: string
+			enterKeyHint?: 'enter' | 'done' | 'go' | 'next' | 'previous' | 'search' | 'send'
+			inputMode?: 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search'
 			is?: string
-			itemid?: string
-			itemprop?: string
-			itemref?: string
-			itemscope?: boolean
-			itemtype?: string
+			itemId?: string
+			itemProp?: string
+			itemRef?: string
+			itemScope?: boolean
+			itemType?: string
 			role?: string
 		}
 
@@ -148,20 +150,20 @@ declare global {
 					placeholder?: string
 					disabled?: boolean
 					required?: boolean
-					readonly?: boolean
+					readOnly?: boolean
 					min?: number | string
 					max?: number | string
 					step?: number | string
 					size?: number
 					multiple?: boolean
 					accept?: string
-					autocomplete?: string
-					autocorrect?: 'on' | 'off'
-					autocapitalize?: 'off' | 'none' | 'on' | 'sentences' | 'words' | 'characters'
-					spellcheck?: boolean | 'true' | 'false'
+					autoComplete?: string
+					autoCorrect?: 'on' | 'off'
+					autoCapitalize?: 'off' | 'none' | 'on' | 'sentences' | 'words' | 'characters'
+					spellCheck?: boolean | 'true' | 'false'
 					pattern?: string
-					maxlength?: number
-					minlength?: number
+					maxLength?: number
+					minLength?: number
 					// Events
 					onInput?: (event: Event) => void
 					onChange?: (event: Event) => void
@@ -176,16 +178,16 @@ declare global {
 				placeholder?: string
 				disabled?: boolean
 				required?: boolean
-				readonly?: boolean
+				readOnly?: boolean
 				rows?: number
 				cols?: number
-				maxlength?: number
-				minlength?: number
+				maxLength?: number
+				minLength?: number
 				wrap?: 'soft' | 'hard' | 'off'
-				autocomplete?: string
-				autocorrect?: 'on' | 'off'
-				autocapitalize?: 'off' | 'none' | 'on' | 'sentences' | 'words' | 'characters'
-				spellcheck?: boolean | 'true' | 'false'
+				autoComplete?: string
+				autoCorrect?: 'on' | 'off'
+				autoCapitalize?: 'off' | 'none' | 'on' | 'sentences' | 'words' | 'characters'
+				spellCheck?: boolean | 'true' | 'false'
 				// Events
 				onInput?: (event: Event) => void
 				onChange?: (event: Event) => void
@@ -199,7 +201,7 @@ declare global {
 				required?: boolean
 				multiple?: boolean
 				size?: number
-				autocomplete?: string
+				autoComplete?: string
 				// Events
 				onChange?: (event: Event) => void
 				onSelect?: (event: Event) => void
@@ -209,13 +211,13 @@ declare global {
 			button: BaseHTMLAttributes & {
 				type?: 'button' | 'submit' | 'reset'
 				disabled?: boolean
-				autofocus?: boolean
+				autoFocus?: boolean
 				form?: string
-				formaction?: string
-				formenctype?: string
-				formmethod?: string
-				formnovalidate?: boolean
-				formtarget?: string
+				formAction?: string
+				formEnctype?: string
+				formMethod?: string
+				formNoValidate?: boolean
+				formTarget?: string
 				name?: string
 				value?: string
 			}
@@ -224,8 +226,8 @@ declare global {
 				action?: string
 				method?: 'get' | 'post' | 'put' | 'delete' | 'patch'
 				enctype?: string
-				autocomplete?: string
-				novalidate?: boolean
+				autoComplete?: string
+				noValidate?: boolean
 				target?: string
 				name?: string
 				accept?: string
@@ -255,9 +257,9 @@ declare global {
 				alt?: string
 				width?: number | string
 				height?: number | string
-				crossorigin?: 'anonymous' | 'use-credentials'
-				usemap?: string
-				ismap?: boolean
+				crossOrigin?: 'anonymous' | 'use-credentials'
+				useMap?: string
+				isMap?: boolean
 				loading?: 'lazy' | 'eager'
 				decoding?: 'sync' | 'async' | 'auto'
 				// Events
@@ -276,8 +278,8 @@ declare global {
 				controls?: boolean
 				width?: number | string
 				height?: number | string
-				crossorigin?: 'anonymous' | 'use-credentials'
-				playsinline?: boolean
+				crossOrigin?: 'anonymous' | 'use-credentials'
+				playsInline?: boolean
 				// Events
 				onLoadstart?: (event: Event) => void
 				onLoadeddata?: (event: Event) => void
@@ -310,7 +312,7 @@ declare global {
 				loop?: boolean
 				muted?: boolean
 				controls?: boolean
-				crossorigin?: 'anonymous' | 'use-credentials'
+				crossOrigin?: 'anonymous' | 'use-credentials'
 				// Events
 				onLoadstart?: (event: Event) => void
 				onLoadeddata?: (event: Event) => void
@@ -342,14 +344,157 @@ declare global {
 				target?: '_blank' | '_self' | '_parent' | '_top' | string
 				rel?: string
 				download?: string
-				hreflang?: string
+				hrefLang?: string
 				type?: string
-				referrerpolicy?: string
+				referrerPolicy?: string
 			}
+
+			// Additional HTML elements with notable attributes
+			dialog: BaseHTMLAttributes & {
+				open?: boolean
+				onCancel?: (event: Event) => void
+				onClose?: (event: Event) => void
+			}
+
+			details: BaseHTMLAttributes & {
+				open?: boolean
+				onToggle?: (event: Event) => void
+			}
+
+			track: BaseHTMLAttributes & {
+				default?: boolean
+				kind?: 'subtitles' | 'captions' | 'descriptions' | 'chapters' | 'metadata'
+				src?: string
+				srclang?: string
+				label?: string
+			}
+
+			script: BaseHTMLAttributes & {
+				src?: string
+				type?: string
+				async?: boolean
+				defer?: boolean
+				nomodule?: boolean
+				crossOrigin?: 'anonymous' | 'use-credentials'
+				integrity?: string
+				referrerPolicy?: string
+				onLoad?: (event: Event) => void
+				onError?: (event: Event) => void
+			}
+
+			iframe: BaseHTMLAttributes & {
+				src?: string
+				srcDoc?: string
+				name?: string
+				width?: number | string
+				height?: number | string
+				allow?: string
+				sandbox?: string
+				loading?: 'eager' | 'lazy'
+				referrerPolicy?: string
+				allowFullScreen?: boolean
+				onLoad?: (event: Event) => void
+				onError?: (event: Event) => void
+			}
+
+			ol: BaseHTMLAttributes & {
+				reversed?: boolean
+				start?: number
+				type?: '1' | 'a' | 'A' | 'i' | 'I'
+			}
+
+			option: BaseHTMLAttributes & {
+				disabled?: boolean
+				selected?: boolean
+				label?: string
+				value?: string
+			}
+
+			optgroup: BaseHTMLAttributes & {
+				disabled?: boolean
+				label?: string
+			}
+
+			progress: BaseHTMLAttributes & {
+				value?: number | string
+				max?: number | string
+			}
+
+			meter: BaseHTMLAttributes & {
+				value?: number | string
+				min?: number | string
+				max?: number | string
+				low?: number | string
+				high?: number | string
+				optimum?: number | string
+			}
+
+			link: BaseHTMLAttributes & {
+				rel?: string
+				href?: string
+				as?: string
+				crossOrigin?: 'anonymous' | 'use-credentials'
+				disabled?: boolean
+				fetchPriority?: 'high' | 'low' | 'auto'
+				imageSizes?: string
+				imageSrcSet?: string
+				media?: string
+				referrerPolicy?: string
+				integrity?: string
+				type?: string
+				sizes?: string
+				onLoad?: (event: Event) => void
+				onError?: (event: Event) => void
+			}
+
+			source: BaseHTMLAttributes & {
+				src?: string
+				type?: string
+				srcSet?: string
+				sizes?: string
+				media?: string
+			}
+
+			area: BaseHTMLAttributes & {
+				alt?: string
+				coords?: string
+				download?: string | boolean
+				href?: string
+				rel?: string
+				shape?: 'rect' | 'circle' | 'poly' | 'default'
+				target?: string
+				referrerPolicy?: string
+			}
+
+			map: BaseHTMLAttributes & {
+				name?: string
+			}
+
+			canvas: BaseHTMLAttributes & {
+				width?: number | string
+				height?: number | string
+			}
+
+			col: BaseHTMLAttributes & { span?: number }
+			colgroup: BaseHTMLAttributes & { span?: number }
+			/* thead/tbody/tfoot/tr omitted since they add no extra attributes */
+			th: BaseHTMLAttributes & {
+				abbr?: string
+				colSpan?: number
+				rowSpan?: number
+				headers?: string
+				scope?: 'row' | 'col' | 'rowgroup' | 'colgroup' | 'auto'
+			}
+			td: BaseHTMLAttributes & {
+				colSpan?: number
+				rowSpan?: number
+				headers?: string
+			}
+
+			slot: BaseHTMLAttributes & { name?: string }
 
 			// Common HTML attributes for all elements
 			[elemName: string]: BaseHTMLAttributes
 		}
 	}
 }
-export {}

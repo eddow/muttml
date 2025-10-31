@@ -1,7 +1,6 @@
 import { effect, ScopedCallback } from 'mutts/src'
 import { bindChildren, For, Fragment, h, Scope } from './renderer'
 
-export * from './registry'
 export * from './utils'
 
 const applicationRoots = new WeakMap<HTMLElement, ScopedCallback>()
