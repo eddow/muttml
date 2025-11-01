@@ -2,7 +2,7 @@
  * Main entry point for Pounce-TS application
  */
 
-import { computed, effect, reactive, trackEffect } from 'mutts/src'
+import { effect, mapped, reactive, trackEffect } from 'mutts/src'
 import { bindApp } from './lib'
 import { defaulted } from './lib/utils'
 
@@ -67,7 +67,7 @@ function MiniCounter(
 	return (
 		<>
 			<debug>
-				{computed.map(state.list, (value, index) => (
+				{mapped(state.list, (value, index) => (
 					<button class="remove" onClick={() => state.list.splice(index, 1)}>
 						{value}
 					</button>

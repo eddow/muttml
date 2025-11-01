@@ -1,82 +1,162 @@
 import type { StyleInput } from '@/lib/styles'
 
 declare global {
-	const h: (type: any, props?: any, ...children: any[]) => any
-	const Fragment: any
+	const h: (type: any, props?: any, ...children: any[]) => JSX.Element
+	const Fragment: (props: { children: any }) => any
 	const Scope: (
-		props: { children?: any; [key: string]: any },
+		props: { children?: JSX.Children; [key: string]: any },
 		scope: Record<PropertyKey, any>
 	) => JSX.Element
 	const For: <T>(props: {
 		each: T[] | (() => T[])
-		children: (item: T) => JSX.Element
+		children: (item: T) => JSX.Children
 	}) => JSX.Element
 	type ComponentFunction = (
 		props: any,
 		scope: Record<PropertyKey, any>
 	) => JSX.Element | JSX.Element[]
-	// biome-ignore lint/suspicious/noConfusingVoidType: Void ends up automatically
-	type HTMLChild = Node | string | number | JSX.Element | void | false
 	namespace JSX {
-		type ScopeName = string
+		// biome-ignore lint/suspicious/noConfusingVoidType: Void ends up automatically
+		type Child = Node | string | number | JSX.Element | void | false
+		type Children = Child | Child[]
 		// Specify the property name used for JSX children
 		interface ElementChildrenAttribute {
 			children: any
 		}
-		type Element = { render(scope?: Record<PropertyKey, any>): Node[] }
+		type Element = {
+			render(scope?: Record<PropertyKey, any>): Node[]
+			if?: boolean
+			else?: boolean
+			when?: (value: any) => boolean
+			this?: (partial: Node | Node[]) => void
+			use?: Record<string, any>
+		}
 		interface ElementClass {
 			template: any
 		}
 		// Override the default JSX children handling
 		// Allow any children type so components can accept function-as-children
-		type IntrinsicAttributes = {
-			children?: any
-			// Meta: capture component reference on render
-			this?: Node | Node[]
-			if?: boolean
-			else?: boolean
-			when?: (value: any) => boolean
-		} & {
-			[K in `use:${ScopeName}`]?: any
-		} & {
-			[K in `if:${ScopeName}`]?: boolean
-		} & {
-			[K in `else:${ScopeName}`]?: boolean
-		} & {
-			[K in `when:${ScopeName}`]?: (value: any) => boolean
-		}
+		type IntrinsicAttributes =
+			| { children: Children }
+			| ({
+					children?: any
+					// Meta: capture component reference on render
+					this?: Node
+					if?: boolean
+					else?: boolean
+					when?: (value: any) => boolean
+			  } & {
+					[K in `use:${string}`]: any
+			  } & {
+					[K in `if:${string}`]?: boolean
+			  } & {
+					[K in `else:${string}`]?: boolean
+			  } & {
+					[K in `when:${string}`]?: (value: any) => boolean
+			  })
 
 		// Custom class type for conditional classes
 		type ClassValue = string | ClassValue[] | Record<string, boolean> | null | undefined
 
-		// Common, reusable HTML attributes shared by most elements
-		type GlobalHTMLAttributes = {
-			// Global attributes
-			id?: string
-			class?: ClassValue
-			style?: string | StyleInput
-			title?: string
-			lang?: string
-			dir?: 'ltr' | 'rtl' | 'auto'
-			hidden?: boolean
-			tabIndex?: number
-			accessKey?: string
-			contentEditable?: boolean | 'true' | 'false' | 'inherit'
-			spellCheck?: boolean | 'true' | 'false'
-			translate?: 'yes' | 'no'
-			autoCapitalize?: 'off' | 'none' | 'on' | 'sentences' | 'words' | 'characters'
-			autoCorrect?: 'on' | 'off'
-			autoComplete?: string
-			enterKeyHint?: 'enter' | 'done' | 'go' | 'next' | 'previous' | 'search' | 'send'
-			inputMode?: 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search'
-			is?: string
-			itemId?: string
-			itemProp?: string
-			itemRef?: string
-			itemScope?: boolean
-			itemType?: string
-			role?: string
+		type Booleanish = boolean | 'true' | 'false'
+
+		type AriaAttributesBase = {
+			'aria-activeDescendant'?: string
+			'aria-atomic'?: Booleanish
+			'aria-autoComplete'?: 'none' | 'inline' | 'list' | 'both'
+			'aria-brailleLabel'?: string
+			'aria-brailleRoleDescription'?: string
+			'aria-busy'?: Booleanish
+			'aria-checked'?: Booleanish | 'mixed'
+			'aria-colCount'?: number
+			'aria-colIndex'?: number
+			'aria-colIndexText'?: string
+			'aria-colSpan'?: number
+			'aria-controls'?: string
+			'aria-current'?: Booleanish | 'page' | 'step' | 'location' | 'date' | 'time'
+			'aria-describedBy'?: string
+			'aria-description'?: string
+			'aria-details'?: string
+			'aria-disabled'?: Booleanish
+			'aria-dropEffect'?: 'none' | 'copy' | 'execute' | 'link' | 'move' | 'popup'
+			'aria-errorMessage'?: string
+			'aria-expanded'?: Booleanish
+			'aria-flowTo'?: string
+			'aria-grabbed'?: Booleanish
+			'aria-hasPopup'?: Booleanish | 'menu' | 'listbox' | 'tree' | 'grid' | 'dialog'
+			'aria-hidden'?: Booleanish
+			'aria-invalid'?: Booleanish | 'grammar' | 'spelling'
+			'aria-keyShortcuts'?: string
+			'aria-label'?: string
+			'aria-labelledBy'?: string
+			'aria-level'?: number
+			'aria-live'?: 'off' | 'assertive' | 'polite'
+			'aria-modal'?: Booleanish
+			'aria-multiLine'?: Booleanish
+			'aria-multiSelectable'?: Booleanish
+			'aria-orientation'?: 'horizontal' | 'vertical'
+			'aria-owns'?: string
+			'aria-placeholder'?: string
+			'aria-posInSet'?: number
+			'aria-pressed'?: Booleanish | 'mixed'
+			'aria-readOnly'?: Booleanish
+			'aria-relevant'?: 'additions' | 'additions text' | 'all' | 'removals' | 'text'
+			'aria-required'?: Booleanish
+			'aria-roleDescription'?: string
+			'aria-rowCount'?: number
+			'aria-rowIndex'?: number
+			'aria-rowIndexText'?: string
+			'aria-rowSpan'?: number
+			'aria-selected'?: Booleanish
+			'aria-setSize'?: number
+			'aria-sort'?: 'none' | 'ascending' | 'descending' | 'other'
+			'aria-valueMax'?: number
+			'aria-valueMin'?: number
+			'aria-valueNow'?: number
+			'aria-valueText'?: string
 		}
+
+		type AriaAttributes = AriaAttributesBase & {
+			[K in Exclude<`aria-${string}`, keyof AriaAttributesBase>]?:
+				| string
+				| number
+				| boolean
+				| undefined
+		}
+
+		type DataAttributes = {
+			[K in `data-${string}`]?: string | number | boolean | null | undefined
+		}
+
+		// Common, reusable HTML attributes shared by most elements
+		type GlobalHTMLAttributes = AriaAttributes &
+			DataAttributes & {
+				// Global attributes
+				id?: string
+				class?: ClassValue
+				style?: string | StyleInput
+				title?: string
+				lang?: string
+				dir?: 'ltr' | 'rtl' | 'auto'
+				hidden?: boolean
+				tabIndex?: number
+				accessKey?: string
+				contentEditable?: boolean | 'true' | 'false' | 'inherit'
+				spellCheck?: boolean | 'true' | 'false'
+				translate?: 'yes' | 'no'
+				autoCapitalize?: 'off' | 'none' | 'on' | 'sentences' | 'words' | 'characters'
+				autoCorrect?: 'on' | 'off'
+				autoComplete?: string
+				enterKeyHint?: 'enter' | 'done' | 'go' | 'next' | 'previous' | 'search' | 'send'
+				inputMode?: 'none' | 'text' | 'tel' | 'url' | 'email' | 'numeric' | 'decimal' | 'search'
+				is?: string
+				itemId?: string
+				itemProp?: string
+				itemRef?: string
+				itemScope?: boolean
+				itemType?: string
+				role?: string
+			}
 
 		// Reusable mouse event handlers for DOM elements
 		type MouseReactiveHTMLAttributes = {
@@ -95,8 +175,8 @@ declare global {
 		// Base interface for common HTML attributes
 		type BaseHTMLAttributes = IntrinsicAttributes &
 			GlobalHTMLAttributes &
-			MouseReactiveHTMLAttributes & { [K in `use:${string}`]?: any } & {
-				children?: HTMLChild | HTMLChild[]
+			MouseReactiveHTMLAttributes & {
+				children?: Children
 				// Additional common non-mouse events
 				onFocus?: (event: FocusEvent) => void
 				onBlur?: (event: FocusEvent) => void

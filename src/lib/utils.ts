@@ -1,4 +1,4 @@
-import { cleanedBy, computed, effect, reactive } from 'mutts/src'
+import { memoize } from 'mutts/src'
 
 type AllOptional<T> = {
 	[K in keyof T as undefined extends T[K] ? K : never]-?: T[K]
@@ -44,6 +44,11 @@ type PropsDesc<P extends Record<string, any>> = {
 		  }
 }
 
+export function copyObject(into: Record<string, any>, from: Record<string, any>) {
+	for (const key of Object.keys(into)) if (!(key in from)) delete into[key]
+	return Object.assign(into, from)
+}
+
 export function propsInto<P extends Record<string, any>, S extends Record<string, any>>(
 	props: PropsDesc<P>,
 	into: S = {} as S
@@ -54,7 +59,7 @@ export function propsInto<P extends Record<string, any>, S extends Record<string
 			// Properties must be configurable as the proxy might return a reactive version of it
 			if (typeof value === 'object' && value !== null && 'get' in value && 'set' in value) {
 				Object.defineProperty(into, key, {
-					get: () => computed(value.get),
+					get: memoize(value.get),
 					set: (newValue) => value.set(newValue),
 					enumerable: true,
 					configurable: true,
@@ -62,7 +67,7 @@ export function propsInto<P extends Record<string, any>, S extends Record<string
 			} else if (typeof value === 'function') {
 				// One-way binding
 				Object.defineProperty(into, key, {
-					get: () => computed(value),
+					get: memoize(value),
 					enumerable: true,
 					configurable: true,
 				})
@@ -85,17 +90,6 @@ export const array = {
 		towards.length = 0
 		towards.push(...from)
 		return towards
-	},
-	computed<T>(computer: () => T[]) {
-		const result = reactive<T[]>([])
-
-		return cleanedBy(
-			result,
-			effect(() => {
-				result.length = 0
-				result.push(...computer())
-			})
-		)
 	},
 	remove<T>(array: T[], item: T) {
 		const index = array.indexOf(item)

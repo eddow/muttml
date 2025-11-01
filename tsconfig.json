@@ -23,7 +23,7 @@
 		"esModuleInterop": true,
 		"forceConsistentCasingInFileNames": true
 	},
-	"include": ["src/**/*"],
+	"include": ["src/**/*", "tests/**/*.ts", "tests/**/*.tsx"],
 	"exclude": ["../mutts/**/*"],
 	"references": [{ "path": "./tsconfig.node.json" }]
 }

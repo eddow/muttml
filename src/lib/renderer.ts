@@ -1,8 +1,8 @@
-import { atomic, computed, effect, reactive, unwrap } from 'mutts/src'
+import { atomic, effect, isNonReactive, mapped, memoize, reactive, unwrap } from 'mutts/src'
 import { classNames } from './classNames'
 import { namedEffect } from './debug'
 import { styles } from './styles'
-import { array, propsInto } from './utils'
+import { propsInto } from './utils'
 
 const logRender = (() => false)() ? console.log : () => {}
 export const rootScope = reactive(Object.create(null, { _: { value: true } }))
@@ -46,13 +46,8 @@ export const h = (
 				const givenProps = reactive(propsInto(regularProps, { children }))
 				// Set scope on the component instance
 				const childScope = reactive(Object.create(scope))
-				const rendered: any = array.computed(function renderEffect() {
-					let elements = componentCtor(givenProps, childScope)
-					//if ('render' in elements) elements = elements.render(childScope)
-					if (!Array.isArray(elements)) elements = [elements]
-					return elements
-				})
-				return processChildren(rendered, childScope)
+				const rendered = componentCtor(givenProps, childScope)
+				return processChildren(Array.isArray(rendered) ? rendered : [rendered], childScope)
 
 				//return rendered
 			},
@@ -98,14 +93,14 @@ export const h = (
 			// Inline styles via styles() helper; supports objects, arrays, strings, and reactive functions
 			if (typeof value === 'function') {
 				effect(function styleEffect() {
-					const computed = styles(value())
+					const computedStyles = styles(value())
 					element.removeAttribute('style')
-					Object.assign(element.style, computed)
+					Object.assign(element.style, computedStyles)
 				})
 			} else {
-				const computed = styles(value as any)
+				const computedStyles = styles(value as any)
 				element.removeAttribute('style')
-				Object.assign(element.style, computed)
+				Object.assign(element.style, computedStyles)
 			}
 		} else if (typeof value === 'object' && value !== null && 'get' in value && 'set' in value) {
 			// 2-way binding for regular elements (e.g., `value={{get: () => this.value, set: val => this.value = val}}`)
@@ -152,14 +147,12 @@ export const h = (
 	const mountObject: any = {
 		render(scope: Record<PropertyKey, any> = rootScope) {
 			logRender('render tag', tag)
-			//effect(function mountChildren() {
 			// Render children
 			if (children && children.length > 0 && !regularProps?.innerHTML) {
 				// Process new children
 				const processedChildren = processChildren(children, scope)
 				bindChildren(element, processedChildren)
 			}
-			//})
 
 			return element
 		},
@@ -176,12 +169,25 @@ export function Scope(
 	})
 	return props.children
 }
-export function For<T>(props: { each: T[]; children: (item: T, index?: number) => JSX.Element }) {
+export function For<T>(props: {
+	each: T[]
+	children: (item: T, oldItem?: JSX.Element) => JSX.Element
+}) {
 	const body = Array.isArray(props.children) ? props.children[0] : props.children
-	const cb = body()
-	return computed.memo(props.each, (item) => cb(item))
+	const cb = body() as (item: T, oldItem?: JSX.Element) => JSX.Element
+	const memoized = memoize(cb as (item: T & object) => JSX.Element)
+	const array = isNonReactive(props.each)
+		? props.each.map((item) => cb(item))
+		: mapped(props.each, (item, _, oldItem?: JSX.Element) =>
+				['object', 'symbol', 'function'].includes(typeof item)
+					? memoized(item as T & object)
+					: cb(item, oldItem)
+			)
+	return Fragment({ children: array })
 }
-export const Fragment = (props: { children: Child[] }) => props.children
+export const Fragment = (props: { children: JSX.Element[] }) => ({
+	render: (scope: Record<PropertyKey, any>) => processChildren(props.children, scope),
+})
 
 export function bindChildren(parent: Node, newChildren: Node | Node[] | undefined) {
 	return effect(function redraw() {
@@ -238,12 +244,44 @@ export type NodeDesc = Node | string | number
  * - A reactive function that returns intermediate values
  * - An array of children (from .map() operations)
  */
-export type Child = NodeDesc | (() => Intermediates) // | Child[]
+export type Child = NodeDesc | (() => Intermediates) | JSX.Element | Child[]
 
 /**
  * Intermediate values - what functions return before final processing
  */
 export type Intermediates = NodeDesc | NodeDesc[]
+
+const render = memoize((renderer: JSX.Element, scope: Record<PropertyKey, any>) => {
+	function valued(to: any) {
+		if (to === true) return undefined
+		return memoize(to.get ?? to)()
+	}
+	function lax(given: any, to: any) {
+		const compared = valued(to)
+		return compared === undefined ? !!given : given === compared
+	}
+	if (renderer.if)
+		for (const [key, value] of Object.entries(renderer.if) as [string, any])
+			if (!lax(scope[key], value)) return false
+	if (renderer.else)
+		for (const [key, value] of Object.entries(renderer.else) as [string, any])
+			if (lax(scope[key], value)) return false
+	if (renderer.when)
+		for (const [key, value] of Object.entries(renderer.when) as [string, any])
+			if (!scope[key](value)) return false
+	const partial = renderer.render(scope)
+	if (renderer.this) {
+		// Handle `this` meta: allow `this:component` to receive the component mount object
+		renderer.this(partial)
+	}
+	if (renderer.use)
+		for (const [key, value] of Object.entries(renderer.use) as [string, any])
+			effect(() => {
+				if (typeof scope[key] !== 'function') throw new Error(`${key} in scope is not a function`)
+				return scope[key](partial, valued(value), scope)
+			})
+	return partial
+})
 
 /**
  * Process children arrays, handling various child types including:
@@ -255,45 +293,22 @@ export type Intermediates = NodeDesc | NodeDesc[]
  * Returns a flat array of DOM nodes suitable for replaceChildren()
  */
 export function processChildren(children: Child[], scope: Record<PropertyKey, any>): Node[] {
-	const perChild = computed.memo(children, (child) => {
+	const perChild = mapped(children, (child, _index, old): Node | Node[] | false | undefined => {
 		const renderer: any = typeof child === 'function' ? child() : child
-		let partial: any = renderer
+		let partial: Node | Node[] | false | undefined = renderer
 		if (renderer && typeof renderer === 'object' && 'render' in renderer) {
-			function valued(to: any) {
-				if (to === true) return undefined
-				return computed(to.get ?? to)
-			}
-			function lax(given: any, to: any) {
-				const compared = valued(to)
-				return compared === undefined ? !!given : given === compared
-			}
-			if ('if' in renderer)
-				for (const [key, value] of Object.entries(renderer.if) as [string, any])
-					if (!lax(scope[key], value)) return false
-			if ('else' in renderer)
-				for (const [key, value] of Object.entries(renderer.else) as [string, any])
-					if (lax(scope[key], value)) return false
-			if ('when' in renderer)
-				for (const [key, value] of Object.entries(renderer.when) as [string, any])
-					if (!scope[key](value)) return false
-			partial = renderer.render(scope)
-			// Handle `this` meta: allow `this:component` to receive the component mount object
-			if ('this' in renderer) {
-				renderer.this(partial)
-			}
-			if ('use' in renderer)
-				for (const [key, value] of Object.entries(renderer.use) as [string, any])
-					effect(() => {
-						if (typeof scope[key] !== 'function')
-							throw new Error(`${key} in scope is not a function`)
-						return scope[key](partial, valued(value), scope)
-					})
+			partial = render(renderer, scope)
 		}
 		if (!partial && typeof partial !== 'number') return
 		if (Array.isArray(partial)) return processChildren(partial, scope)
 		else if (partial instanceof Node) return unwrap(partial)
-		else if (typeof partial === 'string' || typeof partial === 'number')
+		else if (typeof partial === 'string' || typeof partial === 'number') {
+			if (old instanceof Text) {
+				old.textContent = String(partial)
+				return old
+			}
 			return document.createTextNode(String(partial))
+		}
 	})
 	// Second loop: Flatten the temporary results into final Node[]
 	const flattened: Node[] = reactive([])
