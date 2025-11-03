@@ -1,4 +1,4 @@
-import { memoize } from 'mutts/src'
+import { memoize, reactive } from 'mutts/src'
 
 type AllOptional<T> = {
 	[K in keyof T as undefined extends T[K] ? K : never]-?: T[K]
@@ -10,7 +10,9 @@ export function defaulted<T extends Record<PropertyKey, any>, D extends Partial<
 	value: T,
 	defaultValue: D
 ): Defaulted<T, D> {
+	/*
 	return new Proxy(value, {
+		[Symbol.toStringTag]: 'Defaulted',
 		get(target, key) {
 			return key in target ? target[key] : defaultValue[key as keyof D]
 		},
@@ -18,7 +20,11 @@ export function defaulted<T extends Record<PropertyKey, any>, D extends Partial<
 			target[key as keyof T] = value
 			return true
 		},
-	}) as unknown as Defaulted<T, D>
+		has(target, key) {
+			return key in target || key in defaultValue
+		},
+	} as ProxyHandler<T>) as unknown as Defaulted<T, D>*/
+	return Object.setPrototypeOf(value, reactive(defaultValue)) as Defaulted<T, D>
 }
 export function overridden<T extends Record<PropertyKey, any>, D extends Partial<AllOptional<T>>>(
 	value: T,

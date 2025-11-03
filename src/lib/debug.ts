@@ -68,3 +68,11 @@ if (debugMutts) {
 reactiveOptions.maxEffectChain = 1000
 reactiveOptions.maxEffectReaction = 'debug'
 reactiveOptions.instanceMembers = false
+
+export const testing: {
+	renderingEvent?: (evt: string, ...args: any[]) => void
+} = {}
+
+testing.renderingEvent = (evt: string, ...args: any[]) => {
+	console.log('%c renderingEvent', 'color: blue;', evt, args)
+}

@@ -41,7 +41,7 @@ declare global {
 			| ({
 					children?: any
 					// Meta: capture component reference on render
-					this?: Node
+					this?: Node | Node[]
 					if?: boolean
 					else?: boolean
 					when?: (value: any) => boolean

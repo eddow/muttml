@@ -1,7 +1,6 @@
 /**
  * Main entry point for Pounce-TS application
  */
-
 import { effect, mapped, reactive, trackEffect } from 'mutts/src'
 import { bindApp } from './lib'
 import { defaulted } from './lib/utils'

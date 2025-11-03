@@ -2,7 +2,7 @@
  * Todo Web Component using inline JSX templating
  */
 
-import { effect, trackEffect } from 'mutts/src'
+import { effect, memoize, trackEffect } from 'mutts/src'
 import './Todo.scss'
 import { array, defaulted } from '../lib/utils'
 import { Scope } from './controlFlow'
@@ -76,7 +76,7 @@ export default function TodoWebComponent(
 	const activeCount = () => state.todos.filter((todo) => !todo.completed).length
 	const completedCount = () => state.todos.filter((todo) => todo.completed).length
 
-	const filteredTodos = () => {
+	const filteredTodos = memoize(() => {
 		switch (state.filter) {
 			case 'active':
 				return state.todos.filter((todo) => !todo.completed)
@@ -85,7 +85,7 @@ export default function TodoWebComponent(
 			default:
 				return state.todos
 		}
-	}
+	})
 	function setFilter(filter: 'all' | 'active' | 'completed') {
 		state.filter = filter
 	}
@@ -132,7 +132,7 @@ export default function TodoWebComponent(
 			{/* Todo list */}
 			<Scope _={filteredTodos().length > 0}>
 				<div if class="todo-list">
-					<For each={filteredTodos}>
+					<For each={filteredTodos()}>
 						{(todo) => (
 							<div class="todo-item">
 								{console.log('render', todo.text)}

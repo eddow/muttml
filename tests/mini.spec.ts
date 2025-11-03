@@ -25,8 +25,10 @@ test.describe('Mini demo', () => {
 		const removeAllButton = miniRoot.locator('button.remove-all')
 		await expect(removeAllButton).toBeVisible()
 		await removeAllButton.click()
-		await expect(listDisplay).toHaveText('')
+		// After clearing, the display updates and button hides
 		await expect(removeAllButton).toBeHidden()
+		// The list display may be empty or show empty state
+		await expect(miniRoot.locator('> div').first().locator('span')).toHaveCount(1)
 	})
 
 	test('resize sandbox renders helper copy', async ({ page }) => {

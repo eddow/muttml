@@ -1,4 +1,5 @@
 import { effect, ScopedCallback } from 'mutts/src'
+import { testing } from './debug'
 import { bindChildren, For, Fragment, h, Scope } from './renderer'
 
 export { bindChildren, For, Fragment, h, Scope } from './renderer'
@@ -21,6 +22,7 @@ export function bindApp(
 			console.error('App container not found')
 			return
 		}
+		testing.renderingEvent?.('bind app root', appElement)
 		applicationRoots.set(
 			appElement,
 			effect(() => bindChildren(appElement, app.render()))
