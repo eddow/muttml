@@ -25,9 +25,9 @@ declare global {
 		}
 		type Element = {
 			render(scope?: Record<PropertyKey, any>): Node[]
-			if?: boolean
-			else?: boolean
-			when?: (value: any) => boolean
+			if?: Record<string, any>
+			else?: true
+			when?: Record<string, any>
 			this?: (partial: Node | Node[]) => void
 			use?: Record<string, any>
 		}
@@ -42,17 +42,15 @@ declare global {
 					children?: any
 					// Meta: capture component reference on render
 					this?: Node | Node[]
-					if?: boolean
-					else?: boolean
-					when?: (value: any) => boolean
+					if?: any
+					else?: true
+					when?: any
 			  } & {
 					[K in `use:${string}`]: any
 			  } & {
-					[K in `if:${string}`]?: boolean
+					[K in `if:${string}`]?: any
 			  } & {
-					[K in `else:${string}`]?: boolean
-			  } & {
-					[K in `when:${string}`]?: (value: any) => boolean
+					[K in `when:${string}`]?: any
 			  })
 
 		// Custom class type for conditional classes

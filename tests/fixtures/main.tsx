@@ -8,6 +8,7 @@ declare global {
 			renderingEvents: Array<{ event: string; args: any[]; timestamp: number }>
 			reset(): void
 		}
+		__fixturesList?: string[]
 	}
 }
 
@@ -49,10 +50,20 @@ async function loadFixtureFixture() {
 	state.loading = true
 	state.error = null
 	
-	try {
-		// Dynamically import the fixture component
-		const fixtureModule = await import(`./${hash}Tests.tsx`)
-		const FixtureComponent = fixtureModule.default
+    try {
+        // Dynamically import the fixture component via Vite glob for reliability
+        const fixtures = import.meta.glob('./*Tests.tsx') as Record<string, () => Promise<{ default: any }>>
+        const loader = fixtures[`./${hash}Tests.tsx`]
+        window.__fixturesList = Object.keys(fixtures)
+        if (!loader) {
+            state.component = <div>Fixture {hash} not found</div>
+            state.error = `No fixture loader for ./${hash}Tests.tsx`
+            state.loading = false
+            return
+        }
+        const timeout = new Promise<never>((_, rej) => setTimeout(() => rej(new Error('fixture load timeout')), 15000))
+        const fixtureModule = await Promise.race([loader(), timeout])
+        const FixtureComponent = fixtureModule.default
 		
 		if (!FixtureComponent) {
 			state.component = <div>Fixture {hash} has no default export</div>

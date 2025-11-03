@@ -2,9 +2,9 @@ import { atomic, effect, isNonReactive, mapped, memoize, reactive, unwrap } from
 import { classNames } from './classNames'
 import { namedEffect, testing } from './debug'
 import { styles } from './styles'
-import { propsInto } from './utils'
+import { isElement, propsInto } from './utils'
 
-export const rootScope = reactive(Object.create(null, { _: { value: true } }))
+export const rootScope = reactive(Object.create(null, { is: { value: true } }))
 
 function listen(
 	target: EventTarget,
@@ -38,9 +38,12 @@ export const h = (
 			collectedCategories.this = setComponent
 			continue
 		}
-		const match = ['if', 'else', 'when'].includes(key)
-			? ['', key, '_']
-			: key.match(/^([^:]+):(.+)$/)
+		if (key === 'else') {
+			if (value !== true) throw new Error('`else` attribute must not specify a value')
+			collectedCategories.else = true
+			continue
+		}
+		const match = ['if'].includes(key) ? ['', key, 'is'] : key.match(/^([^:]+):(.+)$/)
 		if (match) {
 			const [, category, name] = match
 			collectedCategories[category] ??= {}
@@ -61,8 +64,6 @@ export const h = (
 				const childScope = reactive(Object.create(scope))
 				const rendered = componentCtor(givenProps, childScope)
 				return processChildren(Array.isArray(rendered) ? rendered : [rendered], childScope)
-
-				//return rendered
 			},
 		}
 		return Object.assign(mountObject, collectedCategories)
@@ -196,7 +197,7 @@ export function Scope(
 	scope: Record<PropertyKey, any>
 ) {
 	effect(function scopeEffect() {
-		if (!('_' in props)) scope._ = true
+		if (!('is' in props)) scope.is = true
 		for (const [key, value] of Object.entries(props)) if (key !== 'children') scope[key] = value
 	})
 	return props.children
@@ -213,10 +214,10 @@ export function For<T>(
 	const memoized = memoize(cb as (item: T & object) => JSX.Element)
 	const array = isNonReactive(props.each)
 		? props.each.map((item) => cb(item))
-		: mapped(props.each, (item, _, oldItem?: JSX.Element) =>
+		: mapped(props.each, (item, index, output: JSX.Element[]) =>
 				['object', 'symbol', 'function'].includes(typeof item)
 					? memoized(item as T & object)
-					: cb(item, oldItem)
+					: cb(item, output[index])
 			)
 	return array
 }
@@ -291,24 +292,13 @@ export type Child = NodeDesc | (() => Intermediates) | JSX.Element | Child[]
  */
 export type Intermediates = NodeDesc | NodeDesc[]
 
+function valuedAttribute(to: any) {
+	if (to === true) return undefined
+	if (typeof to === 'function') return memoize(to)()
+	if (typeof to === 'object' && 'get' in to) return memoize(to.get)()
+	return to
+}
 const render = memoize((renderer: JSX.Element, scope: Record<PropertyKey, any>) => {
-	function valued(to: any) {
-		if (to === true) return undefined
-		return memoize(to.get ?? to)()
-	}
-	function lax(given: any, to: any) {
-		const compared = valued(to)
-		return compared === undefined ? !!given : given === compared
-	}
-	if (renderer.if)
-		for (const [key, value] of Object.entries(renderer.if) as [string, any])
-			if (!lax(scope[key], value)) return false
-	if (renderer.else)
-		for (const [key, value] of Object.entries(renderer.else) as [string, any])
-			if (lax(scope[key], value)) return false
-	if (renderer.when)
-		for (const [key, value] of Object.entries(renderer.when) as [string, any])
-			if (!scope[key](value)) return false
 	const partial = renderer.render(scope)
 	if (renderer.this) {
 		// Handle `this` meta: allow `this:component` to receive the component mount object
@@ -318,7 +308,7 @@ const render = memoize((renderer: JSX.Element, scope: Record<PropertyKey, any>) 
 		for (const [key, value] of Object.entries(renderer.use) as [string, any])
 			effect(() => {
 				if (typeof scope[key] !== 'function') throw new Error(`${key} in scope is not a function`)
-				return scope[key](partial, valued(value), scope)
+				return scope[key](partial, valuedAttribute(value), scope)
 			})
 	return partial
 })
@@ -333,34 +323,54 @@ const render = memoize((renderer: JSX.Element, scope: Record<PropertyKey, any>) 
  * Returns a flat array of DOM nodes suitable for replaceChildren()
  */
 export function processChildren(children: Child[], scope: Record<PropertyKey, any>): Node[] {
-	const perChild = mapped(children, (child, _index, old): Node | Node[] | false | undefined => {
-		const renderer: any = typeof child === 'function' ? child() : child
-		const dc = children
-		let partial: Node | Node[] | false | undefined = renderer
-		if (renderer && typeof renderer === 'object' && 'render' in renderer) {
-			partial = render(renderer, scope)
+	const renderers = mapped(children, (child) => (typeof child === 'function' ? child() : child))
+	const conditioned: (boolean | undefined)[] = mapped(renderers, (child, index, conditioned) => {
+		function lax(given: any, to: any) {
+			const compared = valuedAttribute(to)
+			return compared === undefined ? !!given : given === compared
 		}
-		if (!partial && typeof partial !== 'number') return
-		if (Array.isArray(partial)) return processChildren(partial, scope)
-		else if (partial instanceof Node) return unwrap(partial)
-		else if (typeof partial === 'string' || typeof partial === 'number') {
-			if (old instanceof Text) {
-				const textContent = String(partial)
-				testing.renderingEvent?.('update text node', old, textContent)
-				old.textContent = textContent
-				return old
-			}
-
-			const textNodeValue = String(partial)
-			testing.renderingEvent?.('create text node', textNodeValue)
-			return document.createTextNode(textNodeValue)
+		if (isElement(child) && (child.if || child.when || child.else)) {
+			if (child.if)
+				for (const [key, value] of Object.entries(child.if) as [string, any])
+					if (!lax(scope[key], value)) return false
+			if (child.when)
+				for (const [key, value] of Object.entries(child.when) as [string, any])
+					if (!scope[key](valuedAttribute(value))) return false
+			if (child.else) for (let p = 0; p < index; p++) if (conditioned[p] === true) return false
+			return true
 		}
 	})
+	const rendered = mapped(
+		conditioned,
+		(condition, index, rendered): Node | Node[] | false | undefined => {
+			let partial = renderers[index]
+			if (condition === false) return false
+			if (isElement(partial)) {
+				partial = render(partial, scope)
+			}
+			if (!partial && typeof partial !== 'number') return
+			if (Array.isArray(partial)) return processChildren(partial, scope)
+			else if (partial instanceof Node) return unwrap(partial)
+			else if (typeof partial === 'string' || typeof partial === 'number') {
+				const old = rendered[index]
+				if (old instanceof Text) {
+					const textContent = String(partial)
+					testing.renderingEvent?.('update text node', old, textContent)
+					old.textContent = textContent
+					return old
+				}
+
+				const textNodeValue = String(partial)
+				testing.renderingEvent?.('create text node', textNodeValue)
+				return document.createTextNode(textNodeValue)
+			}
+		}
+	)
 	// Second loop: Flatten the temporary results into final Node[]
 	const flattened: Node[] = reactive([])
 	effect(function flattenChildren() {
 		flattened.length = 0
-		for (const item of perChild) {
+		for (const item of rendered) {
 			if (Array.isArray(item)) {
 				flattened.push(...(item.filter(Boolean) as Node[]))
 			} else if (item) {

@@ -130,7 +130,7 @@ export default function TodoWebComponent(
 			</div>
 
 			{/* Todo list */}
-			<Scope _={filteredTodos().length > 0}>
+			<Scope is={filteredTodos().length > 0}>
 				<div if class="todo-list">
 					<For each={filteredTodos()}>
 						{(todo) => (
