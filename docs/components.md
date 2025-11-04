@@ -17,7 +17,7 @@ function Greeting(props: { name: string }) {
 Every component receives two parameters:
 
 1. **`props`**: The component's properties
-2. **`scope`**: The reactive scope for conditional rendering (similar to React context or Svelte context)
+2. **`scope`**: The reactive scope for conditional rendering and mixins (similar to React/Svelte context)
 
 ```tsx
 function MyComponent(
@@ -36,6 +36,12 @@ function MyComponent(
 **Important:** The `scope` parameter uses prototype inheritance. When component A renders component B, B automatically receives A's scope. Any modifications A makes to `scope` are visible to B and all its descendants. This means if `<ComponentA><ComponentB /></ComponentA>` is written in `ComponentC`, ComponentB will still receive ComponentA's scope modifications.
 
 See the [Advanced Features Guide](./advanced.md#scope-management) for more details on scope management.
+
+Conditional rendering with scope
+- `if={...}`: boolean condition
+- `if:name={value}`: compares `value === scope.name`
+- `when:name={arg}`: calls `scope[name](arg)` and checks the returned value
+- `else` and `else if={...}`: use inside fragments to chain branches
 
 ## Default Props
 

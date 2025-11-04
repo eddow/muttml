@@ -26,23 +26,36 @@ test.describe('Renderer features', () => {
 	})
 
 	test('if/else with Scope topic `is`: switch-like matching and else fallback', async ({ page }) => {
-		const alice = page.locator('[data-testid="branch-alice"]')
-		const bob = page.locator('[data-testid="branch-bob"]')
-		const otherwise = page.locator('[data-testid="branch-else"]')
-
-		await expect(alice).toBeVisible()
-		await expect(bob).toBeHidden()
-		await expect(otherwise).toBeHidden()
+		const cond = page.locator('[data-testid="if-else-topic-demo"]')
+		await expect(cond).toContainText('Alice branch')
+		await expect(cond).not.toContainText('Bob branch')
+		await expect(cond).not.toContainText('Else branch')
 
 		await page.click('[data-action="topic-bob"]')
-		await expect(alice).toBeHidden()
-		await expect(bob).toBeVisible()
-		await expect(otherwise).toBeHidden()
+		await expect(cond).not.toContainText('Alice branch')
+		await expect(cond).toContainText('Bob branch')
+		await expect(cond).not.toContainText('Else branch')
 
 		await page.click('[data-action="topic-carol"]')
-		await expect(alice).toBeHidden()
-		await expect(bob).toBeHidden()
-		await expect(otherwise).toBeVisible()
+		await expect(cond).not.toContainText('Alice branch')
+		await expect(cond).not.toContainText('Bob branch')
+		await expect(cond).toContainText('Else branch')
+	})
+	test('if/else with boolean condition', async ({ page }) => {
+		const cond = page.locator('[data-testid="if-else-bool-demo"]')
+		await expect(cond).toContainText('Alice branch')
+		await expect(cond).not.toContainText('Bob branch')
+		await expect(cond).not.toContainText('Else branch')
+
+		await page.click('[data-action="topic-bob"]')
+		await expect(cond).not.toContainText('Alice branch')
+		await expect(cond).toContainText('Bob branch')
+		await expect(cond).not.toContainText('Else branch')
+
+		await page.click('[data-action="topic-carol"]')
+		await expect(cond).not.toContainText('Alice branch')
+		await expect(cond).not.toContainText('Bob branch')
+		await expect(cond).toContainText('Else branch')
 	})
 
 	test('reactive class vs static string', async ({ page }) => {
@@ -120,11 +133,38 @@ test.describe('Renderer features', () => {
 		await expect(cond).toContainText('Hidden')
 	})
 
+	test('else-if chained conditions render correct branch', async ({ page }) => {
+		const demo = page.locator('[data-testid="else-if-condition-demo"]')
+		// initial state.num = 5 -> should show 5-10
+		await page.locator('[data-testid="number"]').fill('7')
+		await expect(demo).toContainText('5-10')
+		await expect(demo).not.toContainText('>10')
+		await expect(demo).not.toContainText('<5')
+
+		// set to 4 -> <5
+		await page.locator('[data-testid="number"]').fill('4')
+		await expect(demo).toContainText('<5')
+		await expect(demo).not.toContainText('5-10')
+		await expect(demo).not.toContainText('>10')
+
+		// set to 11 -> >10
+		await page.locator('[data-testid="number"]').fill('11')
+		await expect(demo).toContainText('>10')
+		await expect(demo).not.toContainText('5-10')
+		await expect(demo).not.toContainText('<5')
+	})
+
 	test('this:component meta captures mount; use meta triggers effect', async ({ page }) => {
 		const stateText = page.locator('[data-testid="this-state"]')
 		await expect(stateText).toHaveText(/true|false/)
 		await page.click('[data-action="toggle-alt"]')
 		await expect(stateText).toHaveText(/true/)
+	})
+
+	test('scope component: children and direct value', async ({ page }) => {
+		const scopeComponent = page.locator('[data-testid="scope-component"]')
+		await expect(scopeComponent.locator('.direct-value')).toHaveText('Direct value is 32')
+		await expect(scopeComponent.locator('.my-value')).toHaveText('My value is 52')
 	})
 })
 

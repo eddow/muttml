@@ -26,6 +26,7 @@ declare global {
 		type Element = {
 			render(scope?: Record<PropertyKey, any>): Node[]
 			if?: Record<string, any>
+			condition?: any
 			else?: true
 			when?: Record<string, any>
 			this?: (partial: Node | Node[]) => void
@@ -42,7 +43,7 @@ declare global {
 					children?: any
 					// Meta: capture component reference on render
 					this?: Node | Node[]
-					if?: any
+					if?: boolean
 					else?: true
 					when?: any
 			  } & {

@@ -1,10 +1,10 @@
-import { atomic, effect, isNonReactive, mapped, memoize, reactive, unwrap } from 'mutts/src'
+import { atomic, biDi, effect, isNonReactive, mapped, memoize, reactive, unwrap } from 'mutts/src'
 import { classNames } from './classNames'
 import { namedEffect, testing } from './debug'
 import { styles } from './styles'
 import { isElement, propsInto } from './utils'
 
-export const rootScope = reactive(Object.create(null, { is: { value: true } }))
+export const rootScope = reactive(Object.create(null))
 
 function listen(
 	target: EventTarget,
@@ -30,26 +30,33 @@ export const h = (
 ): JSX.Element => {
 	// Separate regular props from colon-grouped category props (e.g., "if:user")
 	const regularProps: Record<string, any> = {}
-	const collectedCategories: Record<string, any> = {}
+	const collectedCategories: Record<PropertyKey, any> = {}
 	for (const [key, value] of Object.entries(props || {})) {
-		if (key === 'this') {
-			const setComponent = value?.set
-			if (typeof setComponent !== 'function') throw new Error('`this` attribute must be an L-value')
-			collectedCategories.this = setComponent
-			continue
-		}
-		if (key === 'else') {
-			if (value !== true) throw new Error('`else` attribute must not specify a value')
-			collectedCategories.else = true
-			continue
-		}
-		const match = ['if'].includes(key) ? ['', key, 'is'] : key.match(/^([^:]+):(.+)$/)
-		if (match) {
-			const [, category, name] = match
-			collectedCategories[category] ??= {}
-			collectedCategories[category][name] = value
-		} else {
-			regularProps[key] = value
+		switch (key) {
+			case 'this': {
+				const setComponent = value?.set
+				if (typeof setComponent !== 'function')
+					throw new Error('`this` attribute must be an L-value')
+				collectedCategories.this = setComponent
+				break
+			}
+			case 'else':
+				if (value !== true) throw new Error('`else` attribute must not specify a value')
+				collectedCategories.else = true
+				break
+			case 'if':
+				collectedCategories.condition = value
+				break
+			default: {
+				const match = key.match(/^([^:]+):(.+)$/)
+				if (match) {
+					const [, category, name] = match
+					collectedCategories[category] ??= {}
+					collectedCategories[category][name] = value
+				} else {
+					regularProps[key] = value
+				}
+			}
 		}
 	}
 	// If we were given a component function directly, render it
@@ -134,29 +141,18 @@ export const h = (
 			}
 		} else if (typeof value === 'object' && value !== null && 'get' in value && 'set' in value) {
 			// 2-way binding for regular elements (e.g., `value={{get: () => this.value, set: val => this.value = val}}`)
-			namedEffect(`prop:${key}`, () => {
-				setHtmlProperty(key, value.get())
-			})
+			const provide = biDi((v) => setHtmlProperty(key, v), value)
 			if (tag === 'input') {
 				switch (element.type) {
 					case 'checkbox':
-						if (key === 'checked')
-							listen(element, 'input', () => {
-								value.set(element.checked)
-							})
+						if (key === 'checked') listen(element, 'input', () => provide(element.checked))
 						break
 					case 'number':
 					case 'range':
-						if (key === 'value')
-							listen(element, 'input', () => {
-								value.set(Number(element.value))
-							})
+						if (key === 'value') listen(element, 'input', () => provide(Number(element.value)))
 						break
 					default:
-						if (key === 'value')
-							listen(element, 'input', () => {
-								value.set(element.value)
-							})
+						if (key === 'value') listen(element, 'input', () => provide(element.value))
 						break
 				}
 			}
@@ -197,7 +193,6 @@ export function Scope(
 	scope: Record<PropertyKey, any>
 ) {
 	effect(function scopeEffect() {
-		if (!('is' in props)) scope.is = true
 		for (const [key, value] of Object.entries(props)) if (key !== 'children') scope[key] = value
 	})
 	return props.children
@@ -207,7 +202,7 @@ export function For<T>(
 		each: T[]
 		children: (item: T, oldItem?: JSX.Element) => JSX.Element
 	},
-	_scope: Record<PropertyKey, any>
+	scope: Record<PropertyKey, any>
 ) {
 	const body = Array.isArray(props.children) ? props.children[0] : props.children
 	const cb = body() as (item: T, oldItem?: JSX.Element) => JSX.Element
@@ -219,12 +214,11 @@ export function For<T>(
 					? memoized(item as T & object)
 					: cb(item, output[index])
 			)
-	return array
+	return { render: () => processChildren(array, scope) }
 }
-export const Fragment = (props: { children: JSX.Element[] }) => props.children
-/*({
-	render: (scope: Record<PropertyKey, any>) => processChildren(props.children, scope),
-})*/
+export const Fragment = (props: { children: JSX.Element[] }, scope: Record<PropertyKey, any>) => ({
+	render: () => processChildren(props.children, scope),
+})
 
 export function bindChildren(parent: Node, newChildren: Node | Node[] | undefined) {
 	return effect(function redraw() {
@@ -322,17 +316,17 @@ const render = memoize((renderer: JSX.Element, scope: Record<PropertyKey, any>) 
  *
  * Returns a flat array of DOM nodes suitable for replaceChildren()
  */
-export function processChildren(children: Child[], scope: Record<PropertyKey, any>): Node[] {
+export function processChildren(
+	children: readonly Child[],
+	scope: Record<PropertyKey, any>
+): Node[] {
 	const renderers = mapped(children, (child) => (typeof child === 'function' ? child() : child))
-	const conditioned: (boolean | undefined)[] = mapped(renderers, (child, index, conditioned) => {
-		function lax(given: any, to: any) {
-			const compared = valuedAttribute(to)
-			return compared === undefined ? !!given : given === compared
-		}
-		if (isElement(child) && (child.if || child.when || child.else)) {
+	const conditioned = mapped(renderers, (child, index, conditioned) => {
+		if (isElement(child) && (child.condition || child.if || child.when || child.else)) {
+			if (child.condition && !valuedAttribute(child.condition)) return false
 			if (child.if)
 				for (const [key, value] of Object.entries(child.if) as [string, any])
-					if (!lax(scope[key], value)) return false
+					if (scope[key] !== valuedAttribute(value)) return false
 			if (child.when)
 				for (const [key, value] of Object.entries(child.when) as [string, any])
 					if (!scope[key](valuedAttribute(value))) return false

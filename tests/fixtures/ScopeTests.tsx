@@ -47,31 +47,25 @@ const ScopeFixtureApp = () => (
 
 		<section class="output">
 		<div data-testid="visible-content">
-			<Scope visible={state.visible}>
-				<p if:visible class="visible">Content is visible (count: {state.count})</p>
-				<p else:visible class="hidden">Content is hidden</p>
-			</Scope>
+			<p if={state.visible} class="visible">Content is visible (count: {state.count})</p>
+			<p else class="hidden">Content is hidden</p>
 		</div>
 
 		<div data-testid="conditional-list">
-			<Scope hasItems={state.items.length > 0}>
-				<div if:hasItems class="has-items">
-					<p>Items:</p>
-					<ul>
-						<For each={state.items}>{(item: string) => <li>{item}</li>}</For>
-					</ul>
-				</div>
-				<div else:hasItems class="no-items">
-					<p>No items</p>
-				</div>
-			</Scope>
+			<div if={state.items.length > 0} class="has-items">
+				<p>Items:</p>
+				<ul>
+					<For each={state.items}>{item => <li>{item}</li>}</For>
+				</ul>
+			</div>
+			<div else class="no-items">
+				<p>No items</p>
+			</div>
 		</div>
 
 		<div data-testid="count-display">
-			<Scope highCount={state.count >= 5}>
-				<p if:highCount class="high">Count is high: {state.count}</p>
-				<p else:highCount class="low">Count is low: {state.count}</p>
-			</Scope>
+			<p if={state.count >= 5} class="high">Count is high: {state.count}</p>
+			<p else class="low">Count is low: {state.count}</p>
 		</div>
 		</section>
 	</main>

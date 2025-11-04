@@ -130,41 +130,66 @@ function ThisAndUseDemo(_: any, scope: any) {
 	)
 }
 
-const RendererFeaturesFixture = () => (
-	<main>
-		<h1>Renderer Features Fixture</h1>
-		<section class="controls">
-			<button data-action="toggle-flag" onClick={controls.toggleFlag}>Toggle Flag</button>
-			<button data-action="toggle-alt" onClick={controls.toggleAlt}>Toggle Alt</button>
-			<button data-action="toggle-class" onClick={controls.toggleClass}>Toggle Class</button>
-			<button data-action="style-obj" onClick={() => controls.switchStyle('obj')}>Style Obj</button>
-			<button data-action="style-arr" onClick={() => controls.switchStyle('arr')}>Style Arr</button>
-			<button data-action="style-str" onClick={() => controls.switchStyle('str')}>Style Str</button>
-			<button data-action="toggle-listener" onClick={controls.toggleListener}>Toggle Listener</button>
-			<button data-action="reset-clicks" onClick={controls.resetClicks}>Reset Clicks</button>
-			<button data-action="topic-alice" onClick={() => controls.setTopic('Alice')}>Topic: Alice</button>
-			<button data-action="topic-bob" onClick={() => controls.setTopic('Bob')}>Topic: Bob</button>
-			<button data-action="topic-carol" onClick={() => controls.setTopic('Carol')}>Topic: Carol</button>
-		</section>
-		<section class="output">
-			<ReactiveClassDemo />
-			<StyleDemo />
-			<InnerHtmlDemo />
-			<EventsDemo />
-			<PropVsAttrDemo />
-			<InputsDemo />
-			<section data-testid="if-else-demo">
-				<Scope is={state.topic}>
-					<div if="Alice" data-testid="branch-alice">Alice branch</div>
-					<div if="Bob" data-testid="branch-bob">Bob branch</div>
-					<div else data-testid="branch-else">Else branch</div>
-				</Scope>
+function AComponent(props: { children?: JSX.Children }, scope: Record<PropertyKey, any>) {
+	scope.myValue = 52
+	return <div data-testid="scope-component">{props.children}</div>
+}
+
+function BComponent(_: any, scope: Record<PropertyKey, any>) {
+	return <p class="my-value">My value is {scope.myValue}</p>
+}
+
+const RendererFeaturesFixture = (_: any, scope: Record<PropertyKey, any>) => {
+	scope.myValue = 32
+	return (
+		<main>
+			<h1>Renderer Features Fixture</h1>
+			<section class="controls">
+				<button data-action="toggle-flag" onClick={controls.toggleFlag}>Toggle Flag</button>
+				<button data-action="toggle-alt" onClick={controls.toggleAlt}>Toggle Alt</button>
+				<button data-action="toggle-class" onClick={controls.toggleClass}>Toggle Class</button>
+				<button data-action="style-obj" onClick={() => controls.switchStyle('obj')}>Style Obj</button>
+				<button data-action="style-arr" onClick={() => controls.switchStyle('arr')}>Style Arr</button>
+				<button data-action="style-str" onClick={() => controls.switchStyle('str')}>Style Str</button>
+				<button data-action="toggle-listener" onClick={controls.toggleListener}>Toggle Listener</button>
+				<button data-action="reset-clicks" onClick={controls.resetClicks}>Reset Clicks</button>
+				<button data-action="topic-alice" onClick={() => controls.setTopic('Alice')}>Topic: Alice</button>
+				<button data-action="topic-bob" onClick={() => controls.setTopic('Bob')}>Topic: Bob</button>
+				<button data-action="topic-carol" onClick={() => controls.setTopic('Carol')}>Topic: Carol</button>
 			</section>
-			<RendererConditionsDemo />
-			<ThisAndUseDemo />
-		</section>
-	</main>
-)
+			<section class="output">
+				<ReactiveClassDemo />
+				<StyleDemo />
+				<InnerHtmlDemo />
+				<EventsDemo />
+				<PropVsAttrDemo />
+				<InputsDemo />
+				<section data-testid="if-else-topic-demo">
+					<Scope topic={state.topic}>
+						<div if:topic="Alice" data-testid="branch-alice">Alice branch</div>
+						<div if:topic="Bob" data-testid="branch-bob">Bob branch</div>
+						<div else data-testid="branch-else">Else branch</div>
+					</Scope>
+				</section>
+				<section data-testid="if-else-bool-demo">
+					<div if={state.topic === 'Alice'} data-testid="branch-alice">Alice branch</div>
+					<div if={state.topic === 'Bob'} data-testid="branch-bob">Bob branch</div>
+					<div else data-testid="branch-else">Else branch</div>
+				</section>
+				<section data-testid="else-if-condition-demo">
+					<div if={state.num > 10}>&gt;10</div>
+					<div else if={state.num >= 5}>5-10</div>
+					<div else>&lt;5</div>
+				</section>
+				<RendererConditionsDemo />
+				<ThisAndUseDemo />
+				<AComponent>
+					<BComponent />
+					<p class="direct-value">Direct value is {scope.myValue}</p>
+				</AComponent>
+			</section>
+		</main>
+	)}
 
 export default RendererFeaturesFixture
 

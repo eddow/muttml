@@ -130,8 +130,8 @@ export default function TodoWebComponent(
 			</div>
 
 			{/* Todo list */}
-			<Scope is={filteredTodos().length > 0}>
-				<div if class="todo-list">
+			<>
+				<div if={filteredTodos().length > 0} class="todo-list">
 					<For each={filteredTodos()}>
 						{(todo) => (
 							<div class="todo-item">
@@ -148,7 +148,7 @@ export default function TodoWebComponent(
 				<div else class="empty-message">
 					{state.todos.length === 0 ? 'No todos yet. Add one above!' : `No ${state.filter} todos.`}
 				</div>
-			</Scope>
+			</>
 
 			{/* Clear completed section */}
 			<Scope>

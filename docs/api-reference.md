@@ -142,14 +142,45 @@ trackEffect((obj, evolution) => {
 
 ### Conditional Rendering
 
-- `if:name={value}` - Render if condition is truthy
-- `else:name={value}` - Render if condition is falsy
-- `when:name={fn}` - Render if function returns true
+- `if={condition}` — Render the node when `condition` is truthy.
+- `if:name={value}` — Strict-compare `value === scope.name` to decide rendering.
+- `when:name={arg}` — Call `scope[name](arg)`; render when the returned value is truthy.
+- `else` — Render this node only if no previous sibling in the same fragment has rendered via an `if`/`when` condition. Can be chained as `else if={...}`.
 
-**Example:**
+Notes
+- Use fragments (`<>...</>`) to group multiple `if`/`else if`/`else` branches for a component without adding wrapper DOM.
+- `scope` can be provided via the `<Scope>` component or programmatically within components.
+
+Examples
 ```tsx
-<div if:user={true}>Visible</div>
-<div else:user={true}>Hidden</div>
+// Simple boolean condition
+<div if={state.isLoggedIn}>Welcome back</div>
+
+// Compare against scope
+<Scope role="admin">
+  <>
+    <div if:role={"admin"}>Admin Panel</div>
+    <div else>User Panel</div>
+  </>
+</Scope>
+
+// when: calls scope method
+function App(_p: {}, scope: Record<PropertyKey, any>) {
+  scope.can = (perm: string) => scope.role === 'admin' && perm === 'edit'
+  return (
+    <>
+      <div when:can={"edit"}>You can edit</div>
+      <div else>You cannot edit</div>
+    </>
+  )
+}
+
+// else-if chain inside a fragment
+<>
+  <div if:status={"loading"}>Loading…</div>
+  <div else if:status={"error"}>Something went wrong</div>
+  <div else>Done</div>
+</>
 ```
 
 ### Update Syntax

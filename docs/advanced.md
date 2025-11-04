@@ -4,11 +4,11 @@ This guide covers advanced features and patterns in Pounce-TS.
 
 ## Conditional Rendering
 
-Pounce-TS supports several conditional rendering patterns using scoped properties.
+Pounce-TS supports several conditional rendering patterns using component-local conditions and scoped properties.
 
-### if Conditions
+### `if={...}` boolean conditions
 
-Use `if:` props to conditionally render elements based on scope variables:
+Use a plain `if={condition}` to render when the condition is truthy:
 
 ```tsx
 function App() {
@@ -17,28 +17,52 @@ function App() {
   return (
     <>
       <div>Always visible</div>
-      <div if:user={state.isLoggedIn}>Only when logged in</div>
-      <div if:user={false}>Never shown</div>
+      <div if={state.isLoggedIn}>Only when logged in</div>
+      <div if={!state.isLoggedIn}>Only when logged out</div>
     </>
   )
 }
 ```
 
-### else Conditions
+### `if:name={value}` strict scope comparison
 
-Use `else:` to render when a condition is false:
+Strict-compare a value against `scope.name`:
 
 ```tsx
-<div if:user={true}>Logged in</div>
-<div else:user={true}>Logged out</div>
+<Scope role="admin">
+  <>
+    <div if:role={"admin"}>Admin Dashboard</div>
+    <div else>User Dashboard</div>
+  </>
+</Scope>
 ```
 
-### when Conditions
+### `when:name={arg}` calling a scope function
 
-Use `when:` with functions for custom logic:
+Use `when:` to call a function exposed on `scope` and render if it returns a truthy value:
 
 ```tsx
-<div when:count={(c) => c > 10}>Count is greater than 10</div>
+function Area(props: {}, scope: Record<PropertyKey, any>) {
+  scope.has = (perm: string) => scope.user?.permissions?.includes(perm)
+  return (
+    <>
+      <div when:has={"write"}>You can write</div>
+      <div else>You cannot write</div>
+    </>
+  )
+}
+```
+
+### `else` and `else if` chains
+
+`else` renders only if no previous sibling in the same fragment rendered due to an `if`/`when` condition. Chain with `if` for `else if`:
+
+```tsx
+<>
+  <div if:status={"loading"}>Loading…</div>
+  <div else if:status={"error"}>Error</div>
+  <div else>Ready</div>
+</>
 ```
 
 ## Scope Management
@@ -110,7 +134,7 @@ function ComponentB(props: any, scope: Record<PropertyKey, any>) {
 
 ### Using Scope for Conditional Rendering
 
-Scope is particularly powerful for conditional rendering using the `if:`, `else:`, and `when:` attributes:
+Scope is particularly powerful for conditional rendering using `if`, `if:name`, `when:name`, and `else`:
 
 ```tsx
 function App() {
@@ -127,18 +151,18 @@ function App() {
 function Header(props: any, scope: Record<PropertyKey, any>) {
   return (
     <div>
-      <div if:isLoggedIn={true}>Welcome!</div>
-      <div else:isLoggedIn={true}>Please log in</div>
+      <div if={scope.isLoggedIn}>Welcome!</div>
+      <div else>Please log in</div>
     </div>
   )
 }
 
 function MainContent(props: any, scope: Record<PropertyKey, any>) {
   return (
-    <div>
+    <>
       <div if:role={'admin'}>Admin Dashboard</div>
-      <div else:role={'admin'}>User Dashboard</div>
-    </div>
+      <div else>User Dashboard</div>
+    </>
   )
 }
 ```
