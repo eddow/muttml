@@ -20,6 +20,13 @@ function listen(
 	}
 }
 
+function valuedAttributeGetter(to: any) {
+	if (to === true) return () => undefined
+	if (typeof to === 'function') return memoize(to)
+	if (typeof to === 'object' && 'get' in to) return memoize(to.get)
+	return () => to
+}
+
 /**
  * Custom h() function for JSX rendering - returns a mount function
  */
@@ -45,25 +52,37 @@ export const h = (
 				collectedCategories.else = true
 				break
 			case 'if':
-				collectedCategories.condition = value
+				Object.defineProperty(collectedCategories, 'condition', {
+					get: valuedAttributeGetter(value),
+					enumerable: true,
+					configurable: true,
+				})
+				break
+			case 'use':
+				collectedCategories.mount = value
 				break
 			default: {
 				const match = key.match(/^([^:]+):(.+)$/)
 				if (match) {
 					const [, category, name] = match
 					collectedCategories[category] ??= {}
-					collectedCategories[category][name] = value
+					Object.defineProperty(collectedCategories[category], name, {
+						get: valuedAttributeGetter(value),
+						enumerable: true,
+						configurable: true,
+					})
 				} else {
 					regularProps[key] = value
 				}
 			}
 		}
 	}
+	let mountObject: any
 	// If we were given a component function directly, render it
 	if (typeof tag === 'function') {
 		const componentCtor = tag
 		// Effect for styles - only updates style container
-		const mountObject: any = {
+		mountObject = {
 			render(scope: Record<PropertyKey, any> = rootScope) {
 				testing.renderingEvent?.('render component', componentCtor.name)
 				const givenProps = reactive(propsInto(regularProps, { children }))
@@ -73,120 +92,119 @@ export const h = (
 				return processChildren(Array.isArray(rendered) ? rendered : [rendered], childScope)
 			},
 		}
-		return Object.assign(mountObject, collectedCategories)
-	}
-
-	testing.renderingEvent?.('create element', tag)
-	const element = document.createElement(tag === 'debug' ? 'div' : tag)
-	if (tag === 'input') {
-		props.type ??= 'text'
-		if (typeof props.type !== 'string')
-			console.warn('input type must be a constant string', props.type)
-	}
-	function setHtmlProperty(key: string, value: any) {
-		const normalizedKey = key.toLowerCase()
-		if (value === undefined || value === false) {
-			testing.renderingEvent?.('remove attribute', element, normalizedKey)
-			element.removeAttribute(normalizedKey)
-			return
+	} else {
+		testing.renderingEvent?.('create element', tag)
+		const element = document.createElement(tag === 'debug' ? 'div' : tag)
+		if (tag === 'input') {
+			props.type ??= 'text'
+			if (typeof props.type !== 'string')
+				console.warn('input type must be a constant string', props.type)
 		}
-		const stringValue = String(value)
-		testing.renderingEvent?.('set attribute', element, normalizedKey, stringValue)
-		if (normalizedKey in element) element[normalizedKey] = stringValue
-		else if (key in element) element[key] = stringValue
-		else element.setAttribute(normalizedKey, stringValue)
-	}
-	function applyStyleProperties(computedStyles: Record<string, any>) {
-		element.removeAttribute('style')
-		testing.renderingEvent?.('assign style', element, computedStyles)
-		Object.assign(element.style, computedStyles)
-	}
-	// Set properties
-	for (const [key, value] of Object.entries(regularProps || {})) {
-		if (key === 'children') continue // Skip children, we'll handle them separately
+		function setHtmlProperty(key: string, value: any) {
+			const normalizedKey = key.toLowerCase()
+			if (value === undefined || value === false) {
+				testing.renderingEvent?.('remove attribute', element, normalizedKey)
+				element.removeAttribute(normalizedKey)
+				return
+			}
+			const stringValue = String(value)
+			testing.renderingEvent?.('set attribute', element, normalizedKey, stringValue)
+			if (normalizedKey in element) element[normalizedKey] = stringValue
+			else if (key in element) element[key] = stringValue
+			else element.setAttribute(normalizedKey, stringValue)
+		}
+		function applyStyleProperties(computedStyles: Record<string, any>) {
+			element.removeAttribute('style')
+			testing.renderingEvent?.('assign style', element, computedStyles)
+			Object.assign(element.style, computedStyles)
+		}
+		// Set properties
+		for (const [key, value] of Object.entries(regularProps || {})) {
+			if (key === 'children') continue // Skip children, we'll handle them separately
 
-		if (/^on[A-Z]/.test(key)) {
-			// Event handler
-			const eventType = key.slice(2).toLowerCase()
-			namedEffect(`event:${key}`, () => {
-				const handlerCandidate = value.get ? value.get() : value()
-				if (handlerCandidate === undefined) return
-				const registeredEvent = atomic(handlerCandidate)
-				return listen(element, eventType, registeredEvent)
-			})
-		} else if (key === 'class') {
-			if (typeof value === 'function') {
-				// Reactive class (e.g., `class={() => ['btn', { active: this.isActive }]}`)
-				effect(function className() {
-					const nextClassName = classNames(value())
+			if (/^on[A-Z]/.test(key)) {
+				// Event handler
+				const eventType = key.slice(2).toLowerCase()
+				namedEffect(`event:${key}`, () => {
+					const handlerCandidate = value.get ? value.get() : value()
+					if (handlerCandidate === undefined) return
+					const registeredEvent = atomic(handlerCandidate)
+					return listen(element, eventType, registeredEvent)
+				})
+			} else if (key === 'class') {
+				if (typeof value === 'function') {
+					// Reactive class (e.g., `class={() => ['btn', { active: this.isActive }]}`)
+					effect(function className() {
+						const nextClassName = classNames(value())
+						testing.renderingEvent?.('set className', element, nextClassName)
+						element.className = nextClassName
+					})
+				} else {
+					// Static class
+					const nextClassName = classNames(value)
 					testing.renderingEvent?.('set className', element, nextClassName)
 					element.className = nextClassName
-				})
-			} else {
-				// Static class
-				const nextClassName = classNames(value)
-				testing.renderingEvent?.('set className', element, nextClassName)
-				element.className = nextClassName
-			}
-		} else if (key === 'style') {
-			// Inline styles via styles() helper; supports objects, arrays, strings, and reactive functions
-			if (typeof value === 'function') {
-				effect(function styleEffect() {
-					const computedStyles = styles(value())
-					applyStyleProperties(computedStyles)
-				})
-			} else {
-				const computedStyles = styles(value as any)
-				applyStyleProperties(computedStyles)
-			}
-		} else if (typeof value === 'object' && value !== null && 'get' in value && 'set' in value) {
-			// 2-way binding for regular elements (e.g., `value={{get: () => this.value, set: val => this.value = val}}`)
-			const provide = biDi((v) => setHtmlProperty(key, v), value)
-			if (tag === 'input') {
-				switch (element.type) {
-					case 'checkbox':
-						if (key === 'checked') listen(element, 'input', () => provide(element.checked))
-						break
-					case 'number':
-					case 'range':
-						if (key === 'value') listen(element, 'input', () => provide(Number(element.value)))
-						break
-					default:
-						if (key === 'value') listen(element, 'input', () => provide(element.value))
-						break
 				}
+			} else if (key === 'style') {
+				// Inline styles via styles() helper; supports objects, arrays, strings, and reactive functions
+				if (typeof value === 'function') {
+					effect(function styleEffect() {
+						const computedStyles = styles(value())
+						applyStyleProperties(computedStyles)
+					})
+				} else {
+					const computedStyles = styles(value as any)
+					applyStyleProperties(computedStyles)
+				}
+			} else if (typeof value === 'object' && value !== null && 'get' in value && 'set' in value) {
+				// 2-way binding for regular elements (e.g., `value={{get: () => this.value, set: val => this.value = val}}`)
+				const provide = biDi((v) => setHtmlProperty(key, v), value)
+				if (tag === 'input') {
+					switch (element.type) {
+						case 'checkbox':
+							if (key === 'checked') listen(element, 'input', () => provide(element.checked))
+							break
+						case 'number':
+						case 'range':
+							if (key === 'value') listen(element, 'input', () => provide(Number(element.value)))
+							break
+						default:
+							if (key === 'value') listen(element, 'input', () => provide(element.value))
+							break
+					}
+				}
+			} else if (typeof value === 'function') {
+				// Reactive prop (e.g., `prop={() => this.counter}`)
+				namedEffect(`prop:${key}`, () => {
+					setHtmlProperty(key, value())
+				})
+			} else if (key === 'innerHTML') {
+				if (value !== undefined) {
+					const htmlValue = String(value)
+					testing.renderingEvent?.('set innerHTML', element, htmlValue)
+					element.innerHTML = htmlValue
+				}
+			} else {
+				// Regular attribute
+				setHtmlProperty(key, value)
 			}
-		} else if (typeof value === 'function') {
-			// Reactive prop (e.g., `prop={() => this.counter}`)
-			namedEffect(`prop:${key}`, () => {
-				setHtmlProperty(key, value())
-			})
-		} else if (key === 'innerHTML') {
-			if (value !== undefined) {
-				const htmlValue = String(value)
-				testing.renderingEvent?.('set innerHTML', element, htmlValue)
-				element.innerHTML = htmlValue
-			}
-		} else {
-			// Regular attribute
-			setHtmlProperty(key, value)
+		}
+
+		// Create plain HTML element - also return mount object for consistency
+		mountObject = {
+			render(scope: Record<PropertyKey, any> = rootScope) {
+				// Render children
+				if (children && children.length > 0 && !regularProps?.innerHTML) {
+					// Process new children
+					const processedChildren = processChildren(children, scope)
+					bindChildren(element, processedChildren)
+				}
+
+				return element
+			},
 		}
 	}
-
-	// Create plain HTML element - also return mount object for consistency
-	const mountObject: any = {
-		render(scope: Record<PropertyKey, any> = rootScope) {
-			// Render children
-			if (children && children.length > 0 && !regularProps?.innerHTML) {
-				// Process new children
-				const processedChildren = processChildren(children, scope)
-				bindChildren(element, processedChildren)
-			}
-
-			return element
-		},
-	}
-	return Object.assign(mountObject, collectedCategories)
+	return Object.defineProperties(mountObject, Object.getOwnPropertyDescriptors(collectedCategories))
 }
 export function Scope(
 	props: { children?: any; [key: string]: any },
@@ -209,7 +227,7 @@ export function For<T>(
 	const memoized = memoize(cb as (item: T & object) => JSX.Element)
 	const array = isNonReactive(props.each)
 		? props.each.map((item) => cb(item))
-		: mapped(props.each, (item, index, output: JSX.Element[]) =>
+		: mapped(props.each, (item, index, output: readonly JSX.Element[]) =>
 				['object', 'symbol', 'function'].includes(typeof item)
 					? memoized(item as T & object)
 					: cb(item, output[index])
@@ -286,23 +304,17 @@ export type Child = NodeDesc | (() => Intermediates) | JSX.Element | Child[]
  */
 export type Intermediates = NodeDesc | NodeDesc[]
 
-function valuedAttribute(to: any) {
-	if (to === true) return undefined
-	if (typeof to === 'function') return memoize(to)()
-	if (typeof to === 'object' && 'get' in to) return memoize(to.get)()
-	return to
-}
 const render = memoize((renderer: JSX.Element, scope: Record<PropertyKey, any>) => {
 	const partial = renderer.render(scope)
-	if (renderer.this) {
+	if (renderer.this)
 		// Handle `this` meta: allow `this:component` to receive the component mount object
 		renderer.this(partial)
-	}
+	if (renderer.mount) renderer.mount(partial, scope)
 	if (renderer.use)
 		for (const [key, value] of Object.entries(renderer.use) as [string, any])
 			effect(() => {
 				if (typeof scope[key] !== 'function') throw new Error(`${key} in scope is not a function`)
-				return scope[key](partial, valuedAttribute(value), scope)
+				return scope[key](partial, value, scope)
 			})
 	return partial
 })
@@ -322,14 +334,17 @@ export function processChildren(
 ): Node[] {
 	const renderers = mapped(children, (child) => (typeof child === 'function' ? child() : child))
 	const conditioned = mapped(renderers, (child, index, conditioned) => {
-		if (isElement(child) && (child.condition || child.if || child.when || child.else)) {
-			if (child.condition && !valuedAttribute(child.condition)) return false
+		if (
+			isElement(child) &&
+			('condition' in child || 'if' in child || 'when' in child || 'else' in child)
+		) {
+			if ('condition' in child && !child.condition) return false
 			if (child.if)
 				for (const [key, value] of Object.entries(child.if) as [string, any])
-					if (scope[key] !== valuedAttribute(value)) return false
+					if (scope[key] !== value) return false
 			if (child.when)
 				for (const [key, value] of Object.entries(child.when) as [string, any])
-					if (!scope[key](valuedAttribute(value))) return false
+					if (!scope[key](value)) return false
 			if (child.else) for (let p = 0; p < index; p++) if (conditioned[p] === true) return false
 			return true
 		}
@@ -339,9 +354,7 @@ export function processChildren(
 		(condition, index, rendered): Node | Node[] | false | undefined => {
 			let partial = renderers[index]
 			if (condition === false) return false
-			if (isElement(partial)) {
-				partial = render(partial, scope)
-			}
+			if (isElement(partial)) partial = render(partial, scope)
 			if (!partial && typeof partial !== 'number') return
 			if (Array.isArray(partial)) return processChildren(partial, scope)
 			else if (partial instanceof Node) return unwrap(partial)

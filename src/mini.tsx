@@ -98,6 +98,16 @@ const App = () => (
 		<ResizeSandbox />
 	</>
 )
+/*
+const microState = reactive({count: 0})
+const MicroApp = () => (
+	<>
+		<div>
+			Count: <span>{microState.count}</span>
+		</div>
+		<button onClick={() => microState.count++}>Increment</button>
+	</>
+)*/
 
 // Initialize the app using the automated bindApp helper
 bindApp(<App />, '#mini')

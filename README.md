@@ -97,10 +97,10 @@ const state = reactive({
 
 ### Two-Way Binding
 
-Bind form inputs automatically:
+Bind form inputs and component properties automatically:
 
 ```tsx
-<input value={state.name} />
+<input value={props.name} />
 ```
 
 ### Event Handlers
@@ -109,6 +109,20 @@ Use camelCase event handlers:
 
 ```tsx
 <button onClick={() => state.count++}>Click me</button>
+```
+
+Components use optional callbacks.
+
+### Illustration
+
+```tsx
+function Counter(props: { value: number, onReset?(): void }) {
+  return <>
+    <p>{props.value}</p>
+    <button onClick={()=> props.value++}>Increment</button>
+    <button onClick={onReset}>Reset</button>
+  </>
+}
 ```
 
 ## 📚 Learn More

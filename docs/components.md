@@ -256,6 +256,43 @@ The `use:` directive lets you attach behaviors ("mixins") implemented on the cur
 - Use it in JSX: `use:myMixin={value}`
 
 Signature
+
+### `use={callback}` (mount hook)
+
+Attach an inline mount callback without defining a mixin on `scope`.
+
+- Signature: `use={(target, scope) => void}`
+- `target`: `Node | Node[]` — the rendered target. Intrinsic elements receive a single `Node`. Components typically receive `Node[]` (their rendered children).
+- `scope`: the current reactive scope object.
+
+Example:
+
+```tsx
+function Demo(props: {}, scope: Record<PropertyKey, any>) {
+  return (
+    <>
+      {/* DOM element target */}
+      <div
+        use={(target) => {
+          if (target instanceof HTMLElement) target.dataset.mounted = 'yes'
+        }}
+      />
+
+      {/* Component target (usually Node[]) */}
+      <Counter
+        use={(target) => {
+          const first = Array.isArray(target) ? target[0] : target
+          if (first instanceof HTMLElement) first.classList.add('mounted')
+        }}
+      />
+    </>
+  )
+}
+```
+
+Notes:
+- This is a convenience alternative to `use:name` when you don't need to reuse the behavior via `scope`.
+- The callback is invoked once on mount and does not support reactive updates or cleanup return values. For reactive behavior or cleanup, prefer `use:name` implemented as a scoped mixin.
 - `target`: `Node | Node[]` — the rendered node(s). For components, this is usually an array of HTMLElements; for intrinsic elements, a single HTMLElement.
 - `value`: any | undefined — the value passed from `use:myMixin={...}`; bare `use:myMixin` yields `undefined`.
 - `scope`: the current scope object.

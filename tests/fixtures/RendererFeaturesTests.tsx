@@ -68,6 +68,30 @@ function InnerHtmlDemo() {
 	)
 }
 
+function Box() {
+    return <div data-testid="use-inline-comp-child">C</div>
+}
+
+function UseCallbackDemo(_: any, scope: any) {
+    return (
+        <section data-testid="use-inline-demo">
+            <div
+                data-testid="use-inline-el"
+                use={(target: any) => {
+                    if (target instanceof HTMLElement) target.setAttribute('data-inline', 'yes')
+                }}
+            />
+
+            <Box
+                use={(target: any) => {
+                    const first = Array.isArray(target) ? target[0] : target
+                    if (first instanceof HTMLElement) (first as HTMLElement).setAttribute('data-comp', 'yes')
+                }}
+            />
+        </section>
+    )
+}
+
 function EventsDemo() {
 	const handler = () => { state.clicks++ }
 	return (
@@ -164,6 +188,7 @@ const RendererFeaturesFixture = (_: any, scope: Record<PropertyKey, any>) => {
 				<EventsDemo />
 				<PropVsAttrDemo />
 				<InputsDemo />
+                <UseCallbackDemo />
 				<section data-testid="if-else-topic-demo">
 					<Scope topic={state.topic}>
 						<div if:topic="Alice" data-testid="branch-alice">Alice branch</div>

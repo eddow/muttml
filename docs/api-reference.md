@@ -211,6 +211,29 @@ const refs: Record<string, any> = {}
 <CounterComponent this={refs.counter} count={state.sharedCount} />
 ```
 
+### `use={callback}` (mount hook)
+
+Attach an inline mount callback directly on an element or component.
+
+**Signature:** `use={(target: Node | Node[], scope) => void}`
+
+**Behavior:**
+- Called once after the target is rendered.
+- `target` is the rendered node for intrinsic elements, or `Node[]` for components.
+- No cleanup or reactive re-run; for reactive behavior/cleanup, use `use:name` with a scoped mixin.
+
+**Example:**
+```tsx
+<div use={(el) => { if (el instanceof HTMLElement) el.focus() }} />
+
+<Counter
+  use={(nodes) => {
+    const first = Array.isArray(nodes) ? nodes[0] : nodes
+    if (first instanceof HTMLElement) first.classList.add('mounted')
+  }}
+/>
+```
+
 ### `use:name` (scope mixins)
 
 Attach a scope-provided mixin to the rendered target.

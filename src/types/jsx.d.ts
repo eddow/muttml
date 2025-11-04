@@ -18,19 +18,21 @@ declare global {
 	namespace JSX {
 		// biome-ignore lint/suspicious/noConfusingVoidType: Void ends up automatically
 		type Child = Node | string | number | JSX.Element | void | false
-		type Children = Child | Child[]
+		type Children = Child | readonly Child[]
 		// Specify the property name used for JSX children
 		interface ElementChildrenAttribute {
 			children: any
 		}
 		type Element = {
 			render(scope?: Record<PropertyKey, any>): Node[]
-			if?: Record<string, any>
+			mount?: (target: Node | Node[], scope: Record<PropertyKey, any>) => void
 			condition?: any
 			else?: true
-			when?: Record<string, any>
 			this?: (partial: Node | Node[]) => void
-			use?: Record<string, any>
+			// categories
+			when?: Record<string, any> // when:condition
+			if?: Record<string, any> // if:value
+			use?: Record<string, any> // use:callback
 		}
 		interface ElementClass {
 			template: any
@@ -44,6 +46,7 @@ declare global {
 					// Meta: capture component reference on render
 					this?: Node | Node[]
 					if?: boolean
+					use?: (target: Node | Node[], scope: Record<PropertyKey, any>) => void
 					else?: true
 					when?: any
 			  } & {

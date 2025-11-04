@@ -161,6 +161,15 @@ test.describe('Renderer features', () => {
 		await expect(stateText).toHaveText(/true/)
 	})
 
+	test('use={callback} mounts for component', async ({ page }) => {
+		const compChild = page.locator('[data-testid="use-inline-comp-child"]')
+		await expect(compChild).toHaveAttribute('data-comp', 'yes')
+
+		// Change unrelated state to ensure the mount hook does not re-run/react
+		await page.click('[data-action="toggle-flag"]')
+		await expect(compChild).toHaveAttribute('data-comp', 'yes')
+	})
+
 	test('scope component: children and direct value', async ({ page }) => {
 		const scopeComponent = page.locator('[data-testid="scope-component"]')
 		await expect(scopeComponent.locator('.direct-value')).toHaveText('Direct value is 32')

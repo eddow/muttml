@@ -1,14 +1,13 @@
-import { activeEffect, effect, reactiveOptions } from 'mutts/src'
+import { effect, getActiveEffect, reactiveOptions } from 'mutts/src'
 
 export function nf<T extends Function>(name: string, fn: T): T {
 	Object.defineProperty(fn, 'name', { value: name })
 	return fn
 }
 export function namedEffect(name: string, fn: () => void): () => void {
-	if (!activeEffect) {
+	if (!getActiveEffect()) {
 		console.warn(`TL;DR: Define reactive behaviors in components, not in the root code.
-Reactive behavior should only occur within effects.
-See https://github.com/RJ-Ferguson/mutts/blob/main/docs/api-reference.md#assertinffect`)
+Reactive behavior should only occur within effects.`)
 	}
 	return effect(nf(name, fn))
 }
@@ -72,7 +71,7 @@ reactiveOptions.instanceMembers = false
 export const testing: {
 	renderingEvent?: (evt: string, ...args: any[]) => void
 } = {}
-
+/*
 testing.renderingEvent = (evt: string, ...args: any[]) => {
 	console.log('%c renderingEvent', 'color: blue;', evt, args)
-}
+}*/
