@@ -83,8 +83,8 @@ Simple values passed directly:
 Props can be reactive functions or two-way bindings:
 
 ```tsx
-// One-way binding with computed
-const doubled = computed(() => state.counter * 2)
+// One-way binding with memoized derivation
+const doubled = memoize(() => state.counter * 2)
 <Counter count={doubled} />
 
 // Two-way binding
@@ -262,7 +262,7 @@ Signature
 Attach an inline mount callback without defining a mixin on `scope`.
 
 - Signature: `use={(target, scope) => void}`
-- `target`: `Node | Node[]` — the rendered target. Intrinsic elements receive a single `Node`. Components typically receive `Node[]` (their rendered children).
+- `target`: `Node | Node[]` — the rendered target. Intrinsic elements receive a single `Node`. Components may yield a `Node` or `Node[]`.
 - `scope`: the current reactive scope object.
 
 Example:
@@ -278,7 +278,7 @@ function Demo(props: {}, scope: Record<PropertyKey, any>) {
         }}
       />
 
-      {/* Component target (usually Node[]) */}
+      {/* Component target */}
       <Counter
         use={(target) => {
           const first = Array.isArray(target) ? target[0] : target
@@ -293,7 +293,7 @@ function Demo(props: {}, scope: Record<PropertyKey, any>) {
 Notes:
 - This is a convenience alternative to `use:name` when you don't need to reuse the behavior via `scope`.
 - The callback is invoked once on mount and does not support reactive updates or cleanup return values. For reactive behavior or cleanup, prefer `use:name` implemented as a scoped mixin.
-- `target`: `Node | Node[]` — the rendered node(s). For components, this is usually an array of HTMLElements; for intrinsic elements, a single HTMLElement.
+- `target`: `Node | Node[]` — the rendered node(s). For components, handle either a single node or an array.
 - `value`: any | undefined — the value passed from `use:myMixin={...}`; bare `use:myMixin` yields `undefined`.
 - `scope`: the current scope object.
 - Return value: optional cleanup function `() => void` (called on dispose/re-run), or nothing.
@@ -337,13 +337,13 @@ Notes
 
 Use the `this` attribute to capture a reference to either:
 - **A DOM element** (for intrinsic elements like `div`, `input`, ...), or
-- **The rendered output of a component**, which is typically an array of `HTMLElement` when the component renders multiple root nodes.
+- **The rendered output of a component** (treat as `Node | Node[]`).
 
 Behavior
 - The value passed to `this` must be an L‑value (a ref sink). In the default renderer, this is anything that provides a callable value with a `.set(...)` method; on render, the renderer will call that setter with the rendered value.
 - The value provided to your setter will be:
   - `HTMLElement` for regular DOM elements.
-  - `HTMLElement[]` for components (most components produce arrays; even a single root may be wrapped as an array by the renderer).
+  - `Node | Node[]` for components, depending on their rendered output.
 - The setter may be called more than once due to re-renders.
 
 Examples
@@ -381,7 +381,7 @@ const refs: Record<string, any> = {}
 ```
 
 Notes
-- Treat component refs as arrays of `HTMLElement`. If you need a single node, select `refs.counter?.get?.()[0]` (depending on your ref shape) or handle both `HTMLElement | HTMLElement[]` defensively.
-- If your own ref abstraction differs, adapt your L‑value so that `this={...}` receives a setter that accepts `HTMLElement | HTMLElement[]`.
+- Handle component refs as `Node | Node[]`. If you need a single node, pick the first when you receive an array.
+- If your own ref abstraction differs, adapt your L‑value so that `this={...}` receives a setter that accepts `Node | Node[]`.
 
 

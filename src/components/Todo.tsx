@@ -4,7 +4,7 @@
 
 import { effect, memoize, trackEffect } from 'mutts/src'
 import './Todo.scss'
-import { array, defaulted } from '../lib/utils'
+import { array, extend } from '../lib/utils'
 import { Scope } from './controlFlow'
 
 interface Todo {
@@ -30,7 +30,7 @@ export default function TodoWebComponent(
 	trackEffect((obj, evolution) => {
 		console.log(obj, evolution)
 	})
-	const state = defaulted(props, {
+	const state = extend(props, {
 		placeholder: 'Add a new todo...',
 		showFilters: true,
 		showClearCompleted: true,

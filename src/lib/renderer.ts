@@ -1,8 +1,18 @@
-import { atomic, biDi, effect, isNonReactive, mapped, memoize, reactive, unwrap } from 'mutts/src'
+import {
+	atomic,
+	biDi,
+	effect,
+	isNonReactive,
+	mapped,
+	memoize,
+	reactive,
+	reduced,
+	unwrap,
+} from 'mutts/src'
 import { classNames } from './classNames'
 import { namedEffect, testing } from './debug'
 import { styles } from './styles'
-import { isElement, propsInto } from './utils'
+import { extend, isElement, propsInto } from './utils'
 
 export const rootScope = reactive(Object.create(null))
 
@@ -44,7 +54,7 @@ export const h = (
 				const setComponent = value?.set
 				if (typeof setComponent !== 'function')
 					throw new Error('`this` attribute must be an L-value')
-				collectedCategories.this = setComponent
+				collectedCategories.mount = [setComponent, ...(collectedCategories.mount || [])]
 				break
 			}
 			case 'else':
@@ -52,6 +62,7 @@ export const h = (
 				collectedCategories.else = true
 				break
 			case 'if':
+				//propsInto({collectedCategories}, { condition: value })
 				Object.defineProperty(collectedCategories, 'condition', {
 					get: valuedAttributeGetter(value),
 					enumerable: true,
@@ -59,7 +70,10 @@ export const h = (
 				})
 				break
 			case 'use':
-				collectedCategories.mount = value
+				collectedCategories.mount = [
+					valuedAttributeGetter(value)(),
+					...(collectedCategories.mount || []),
+				]
 				break
 			default: {
 				const match = key.match(/^([^:]+):(.+)$/)
@@ -87,14 +101,14 @@ export const h = (
 				testing.renderingEvent?.('render component', componentCtor.name)
 				const givenProps = reactive(propsInto(regularProps, { children }))
 				// Set scope on the component instance
-				const childScope = reactive(Object.create(scope))
+				const childScope = extend({}, scope)
 				const rendered = componentCtor(givenProps, childScope)
-				return processChildren(Array.isArray(rendered) ? rendered : [rendered], childScope)
+				return processChildren([rendered], childScope)
 			},
 		}
 	} else {
 		testing.renderingEvent?.('create element', tag)
-		const element = document.createElement(tag === 'debug' ? 'div' : tag)
+		const element = document.createElement(tag === 'debug:test' ? 'div' : tag)
 		if (tag === 'input') {
 			props.type ??= 'text'
 			if (typeof props.type !== 'string')
@@ -238,14 +252,14 @@ export const Fragment = (props: { children: JSX.Element[] }, scope: Record<Prope
 	render: () => processChildren(props.children, scope),
 })
 
-export function bindChildren(parent: Node, newChildren: Node | Node[] | undefined) {
+export function bindChildren(parent: Node, newChildren: Node | readonly Node[] | undefined) {
 	return effect(function redraw() {
 		let added = 0
 		let removed = 0
 		// Replace children
 		let newIndex = 0
 		if (!newChildren) newChildren = []
-		if (!Array.isArray(newChildren)) newChildren = [newChildren]
+		if (!Array.isArray(newChildren)) newChildren = [newChildren] as readonly Node[]
 
 		// Iterate through newChildren and sync with live DOM
 		while (newIndex < newChildren.length) {
@@ -306,10 +320,7 @@ export type Intermediates = NodeDesc | NodeDesc[]
 
 const render = memoize((renderer: JSX.Element, scope: Record<PropertyKey, any>) => {
 	const partial = renderer.render(scope)
-	if (renderer.this)
-		// Handle `this` meta: allow `this:component` to receive the component mount object
-		renderer.this(partial)
-	if (renderer.mount) renderer.mount(partial, scope)
+	if (renderer.mount) for (const mount of renderer.mount) effect(() => mount(partial))
 	if (renderer.use)
 		for (const [key, value] of Object.entries(renderer.use) as [string, any])
 			effect(() => {
@@ -331,59 +342,52 @@ const render = memoize((renderer: JSX.Element, scope: Record<PropertyKey, any>) 
 export function processChildren(
 	children: readonly Child[],
 	scope: Record<PropertyKey, any>
-): Node[] {
+): readonly Node[] {
 	const renderers = mapped(children, (child) => (typeof child === 'function' ? child() : child))
-	const conditioned = mapped(renderers, (child, index, conditioned) => {
+	const conditioned = reduced(renderers, (child, previous: { had?: true }) => {
 		if (
 			isElement(child) &&
 			('condition' in child || 'if' in child || 'when' in child || 'else' in child)
 		) {
-			if ('condition' in child && !child.condition) return false
+			if (child.else && previous.had) return []
+			if ('condition' in child && !child.condition) return []
 			if (child.if)
 				for (const [key, value] of Object.entries(child.if) as [string, any])
-					if (scope[key] !== value) return false
+					if (scope[key] !== value) return []
 			if (child.when)
 				for (const [key, value] of Object.entries(child.when) as [string, any])
-					if (!scope[key](value)) return false
-			if (child.else) for (let p = 0; p < index; p++) if (conditioned[p] === true) return false
-			return true
+					if (!scope[key](value)) return []
+			previous.had = true
 		}
+		return [child]
 	})
-	const rendered = mapped(
-		conditioned,
-		(condition, index, rendered): Node | Node[] | false | undefined => {
-			let partial = renderers[index]
-			if (condition === false) return false
-			if (isElement(partial)) partial = render(partial, scope)
-			if (!partial && typeof partial !== 'number') return
-			if (Array.isArray(partial)) return processChildren(partial, scope)
-			else if (partial instanceof Node) return unwrap(partial)
-			else if (typeof partial === 'string' || typeof partial === 'number') {
-				const old = rendered[index]
+
+	const rendered = mapped(conditioned, (partial): Node | readonly Node[] | false | undefined => {
+		if (isElement(partial)) partial = render(partial, scope)
+		if (!partial && typeof partial !== 'number') return
+		if (Array.isArray(partial)) return processChildren(partial, scope)
+		else if (partial instanceof Node) return unwrap(partial)
+		else if (typeof partial === 'string' || typeof partial === 'number') {
+			/*const old = rendered[index]
 				if (old instanceof Text) {
 					const textContent = String(partial)
 					testing.renderingEvent?.('update text node', old, textContent)
 					old.textContent = textContent
 					return old
-				}
-
-				const textNodeValue = String(partial)
-				testing.renderingEvent?.('create text node', textNodeValue)
-				return document.createTextNode(textNodeValue)
-			}
-		}
-	)
-	// Second loop: Flatten the temporary results into final Node[]
-	const flattened: Node[] = reactive([])
-	effect(function flattenChildren() {
-		flattened.length = 0
-		for (const item of rendered) {
-			if (Array.isArray(item)) {
-				flattened.push(...(item.filter(Boolean) as Node[]))
-			} else if (item) {
-				flattened.push(item)
-			}
+				}*/
+			const textNodeValue = String(partial)
+			testing.renderingEvent?.('create text node', textNodeValue)
+			return document.createTextNode(textNodeValue)
 		}
 	})
-	return flattened
+	// Second loop: Flatten the temporary results into final Node[]
+	return reduced(
+		rendered,
+		(item) =>
+			(Array.isArray(item)
+				? (item.filter(Boolean) as Node[])
+				: item
+					? [item]
+					: []) as readonly Node[]
+	)
 }

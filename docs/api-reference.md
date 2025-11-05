@@ -68,29 +68,7 @@ const props = defaulted(inputProps, {
 
 ## Array Utilities
 
-### `array.computed(computer)`
-
-Creates a reactive computed array.
-
-**Parameters:**
-- `computer` - Function that returns an array
-
-**Returns:** Reactive array
-
-**Example:**
-```tsx
-const doubled = array.computed(() => items.map(x => x * 2))
-```
-
-### `array.remove(array, item)`
-
-Removes an item from an array.
-
-**Parameters:**
-- `array` - The array to modify
-- `item` - The item to remove
-
-**Returns:** Boolean indicating success
+For derived arrays, prefer creating memoized derivations with `memoize(() => ...)` from the reactive API.
 
 ### `array.filter(array, filterFn)`
 
@@ -102,27 +80,9 @@ Filters an array in-place.
 
 **Returns:** Boolean (false when done)
 
-### `array.into(towards, from)`
-
-Copies elements from one array to another.
-
-**Parameters:**
-- `towards` - Target array
-- `from` - Source array
-
-**Returns:** Target array
-
 ## Debug Utilities
 
-### `namedEffect(name, fn)`
-
-Creates an effect with a custom name for debugging.
-
-**Parameters:**
-- `name` - Effect name
-- `fn` - Effect function
-
-**Returns:** Cleanup function
+Note: advanced debug helpers are internal; prefer `effect()` and `trackEffect()` in userland.
 
 ### `trackEffect(callback)`
 
@@ -197,7 +157,7 @@ function App(_p: {}, scope: Record<PropertyKey, any>) {
 Capture a reference to the rendered target.
 
 - For intrinsic DOM elements, the value is an `HTMLElement`.
-- For components, the value is usually an array of `HTMLElement` (component render output).
+- For components, the value may be a `Node` or `Node[]` (component render output).
 
 The value passed to `this` must be an L‑value (a ref sink) that the renderer can set during render.
 
@@ -207,7 +167,7 @@ const refs: Record<string, any> = {}
 // DOM element ref
 <input this={refs.input} value={state.sharedCount} />
 
-// Component ref (receives HTMLElement[])
+// Component ref (may receive Node or Node[])
 <CounterComponent this={refs.counter} count={state.sharedCount} />
 ```
 
@@ -219,7 +179,7 @@ Attach an inline mount callback directly on an element or component.
 
 **Behavior:**
 - Called once after the target is rendered.
-- `target` is the rendered node for intrinsic elements, or `Node[]` for components.
+- `target` is the rendered node for intrinsic elements, or `Node | Node[]` for components.
 - No cleanup or reactive re-run; for reactive behavior/cleanup, use `use:name` with a scoped mixin.
 
 **Example:**
@@ -325,32 +285,25 @@ Creates a reactive proxy object.
 const state = reactive({ count: 0 })
 ```
 
-### `computed(fn)`
+### `memoize(fn)`
 
-Creates a computed reactive value.
+Creates a memoized reactive derivation.
 
 **Example:**
 ```tsx
-const doubled = computed(() => state.count * 2)
+const doubled = memoize(() => state.count * 2)
 ```
 
-### `computed.map(array, fn)`
+### `mapped(arrayOrGetter, fn)`
 
 Maps over a reactive array.
 
 **Example:**
 ```tsx
-{computed.map(items, (item) => <div>{item.name}</div>)}
+{mapped(items, (item) => <div>{item.name}</div>)}
 ```
 
-### `computed.memo(array, fn)`
-
-Memos a computed mapping over an array.
-
-**Example:**
-```tsx
-const processed = computed.memo(items, expensiveProcess)
-```
+Use `memoize` to cache expensive derivations.
 
 ### `effect(fn)`
 

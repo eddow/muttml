@@ -3,7 +3,7 @@
  */
 
 import './Wrapper.scss'
-import { defaulted } from '../lib/utils'
+import { extend } from '../lib/utils'
 
 export default function WrapperComponent(
 	props: {
@@ -15,7 +15,7 @@ export default function WrapperComponent(
 		children?: JSX.Element | JSX.Element[]
 	}
 ) {
-	const state = defaulted(props, {
+	const state = extend(props, {
 		title: 'Wrapper Component',
 		description: 'This wrapper contains children:',
 		class: 'wrapper',

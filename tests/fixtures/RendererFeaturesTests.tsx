@@ -77,13 +77,13 @@ function UseCallbackDemo(_: any, scope: any) {
         <section data-testid="use-inline-demo">
             <div
                 data-testid="use-inline-el"
-                use={(target: any) => {
+                use={(target: HTMLElement) => {
                     if (target instanceof HTMLElement) target.setAttribute('data-inline', 'yes')
                 }}
             />
 
             <Box
-                use={(target: any) => {
+                use={(target: Node|Node[]) => {
                     const first = Array.isArray(target) ? target[0] : target
                     if (first instanceof HTMLElement) (first as HTMLElement).setAttribute('data-comp', 'yes')
                 }}

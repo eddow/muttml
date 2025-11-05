@@ -6,39 +6,11 @@ type AllOptional<T> = {
 
 type Defaulted<T, D extends Partial<AllOptional<T>>> = Omit<T, keyof D> & Required<D>
 
-export function defaulted<T extends Record<PropertyKey, any>, D extends Partial<AllOptional<T>>>(
-	value: T,
-	defaultValue: D
-): Defaulted<T, D> {
-	/*
-	return new Proxy(value, {
-		[Symbol.toStringTag]: 'Defaulted',
-		get(target, key) {
-			return key in target ? target[key] : defaultValue[key as keyof D]
-		},
-		set(target, key, value) {
-			target[key as keyof T] = value
-			return true
-		},
-		has(target, key) {
-			return key in target || key in defaultValue
-		},
-	} as ProxyHandler<T>) as unknown as Defaulted<T, D>*/
-	return Object.setPrototypeOf(value, reactive(defaultValue)) as Defaulted<T, D>
-}
-export function overridden<T extends Record<PropertyKey, any>, D extends Partial<AllOptional<T>>>(
-	value: T,
-	overrides: D
-): Defaulted<T, D> {
-	return new Proxy(value, {
-		get(target, key) {
-			return key in overrides ? overrides[key as keyof D] : target[key]
-		},
-		set(target, key, value) {
-			target[key as keyof T] = value
-			return true
-		},
-	}) as unknown as Defaulted<T, D>
+export function extend<A extends Record<PropertyKey, any>, B extends Record<PropertyKey, any>>(
+	added: A,
+	base: B
+): A & B {
+	return reactive(Object.create(base, Object.getOwnPropertyDescriptors(added)))
 }
 type PropsDesc<P extends Record<string, any>> = {
 	[K in keyof P]:
@@ -92,11 +64,6 @@ export function propsInto<P extends Record<string, any>, S extends Record<string
 }
 
 export const array = {
-	into<T>(towards: T[], from: T[]) {
-		towards.length = 0
-		towards.push(...from)
-		return towards
-	},
 	remove<T>(array: T[], item: T) {
 		const index = array.indexOf(item)
 		if (index !== -1) array.splice(index, 1)

@@ -87,11 +87,11 @@ const state = reactive({ price: 0 })
 
 ## One-Way Binding
 
-For read-only values or computed properties, use one-way binding:
+For read-only values or memoized properties, use one-way binding:
 
 ```tsx
-// Computed value (reactive)
-const displayName = computed(() => state.name.toUpperCase())
+// Memoized value (reactive)
+const displayName = memoize(() => state.name.toUpperCase())
 <input value={displayName} />
 ```
 
@@ -111,8 +111,8 @@ const state = reactive({ count: 0 })
 // Two-way binding
 <Counter count={state.count} />
 
-// One-way binding with computed
-const doubled = computed(() => state.count * 2)
+// One-way binding with memoize
+const doubled = memoize(() => state.count * 2)
 <Counter count={doubled} />
 ```
 

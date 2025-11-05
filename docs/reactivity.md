@@ -30,44 +30,41 @@ state.name = 'Alice'    // Triggers re-render
 state.items.push(item)  // Triggers re-render
 ```
 
-## Computed Values
+## Derived Values
 
-### Creating Computed Properties
+### Creating Memoized Derivations
 
-Use `computed()` to create derived values:
+Use `memoize()` to create derived values:
 
 ```tsx
-import { computed } from 'mutts/src'
+import { memoize } from 'mutts/src'
 
 const state = reactive({
   firstName: 'John',
   lastName: 'Doe'
 })
 
-const fullName = computed(() => 
-  `${state.firstName} ${state.lastName}`
-)
+const fullName = memoize(() => `${state.firstName} ${state.lastName}`)
 
 // Usage
 <p>Hello, {fullName()}</p>
 ```
 
-### Computed Arrays
+### Reactive Array Mapping
 
-Map over arrays reactively:
+Map over arrays reactively with `mapped`:
 
 ```tsx
-import { computed } from 'mutts/src'
+import { mapped } from 'mutts/src'
 
 const todos = reactive([
   { id: 1, text: 'Task 1', done: false },
   { id: 2, text: 'Task 2', done: true }
 ])
 
-// In your component
 <div>
-  {computed.map(todos, (todo) => (
-    <div key={todo.id}>
+  {mapped(todos, (todo) => (
+    <div>
       <input type="checkbox" checked={todo.done} />
       <span>{todo.text}</span>
     </div>
@@ -80,16 +77,12 @@ const todos = reactive([
 Filter arrays reactively:
 
 ```tsx
-const activeTodos = computed(() => 
-  todos.filter(t => !t.done)
-)
+import { memoize, mapped } from 'mutts/src'
 
-// Or inline
+const activeTodos = memoize(() => todos.filter(t => !t.done))
+
 <div>
-  {computed.map(
-    computed(() => todos.filter(t => !t.done)),
-    (todo) => <div>{todo.text}</div>
-  )}
+  {mapped(activeTodos, (todo) => <div>{todo.text}</div>)}
 </div>
 ```
 
@@ -110,17 +103,9 @@ effect(() => {
 })
 ```
 
-### Named Effects
+### Debugging effects
 
-Use `namedEffect()` for better debugging:
-
-```tsx
-import { namedEffect } from '../lib/debug'
-
-namedEffect('updateTitle', () => {
-  document.title = `Count: ${state.count}`
-})
-```
+For development-time tracing, see debug utilities; production code should use `effect()`.
 
 ## Watching Values
 
@@ -184,10 +169,8 @@ array.remove(items, 2)  // Removes first occurrence of 2
 // Filter items
 array.filter(items, item => item > 1)  // Keeps only items > 1
 
-// Compute array
-const doubled = array.computed(() => 
-  items.map(x => x * 2)
-)
+// Derived array
+const doubled = memoize(() => items.map(x => x * 2))
 ```
 
 ### Defaulted Props

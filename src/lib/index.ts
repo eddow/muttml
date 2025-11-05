@@ -38,5 +38,3 @@ export function bindApp(
 }
 
 Object.assign(globalThis, { h, Fragment, Scope, For })
-
-// TODO property get/set: pair so that prop set doesn't trigger prop-get

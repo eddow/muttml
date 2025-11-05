@@ -310,7 +310,7 @@ function Input(props: {
 const state = reactive({ text: 'Hello' })
 
 // Computed value
-const displayText = computed(() => state.text.toUpperCase())
+const displayText = memoize(() => state.text.toUpperCase())
 <Input value={displayText} />
 
 // Two-way binding
@@ -335,20 +335,17 @@ function DynamicComponent(props: Record<string, any>) {
 
 ### Memoization
 
-Use `computed.memo` for expensive calculations:
+Use `memoize` for expensive calculations:
 
 ```tsx
-import { computed } from 'mutts/src'
+import { memoize } from 'mutts/src'
 
 function ExpensiveList(props: { items: Item[] }) {
-  const processed = computed.memo(props.items, (item) => {
-    // Expensive computation
-    return expensiveProcess(item)
-  })
+  const processed = memoize(() => props.items.map(expensiveProcess))
   
   return (
     <div>
-      {processed.map(item => <div>{item.result}</div>)}
+      {processed().map(item => <div>{item.result}</div>)}
     </div>
   )
 }
@@ -487,7 +484,7 @@ function processItem(item: any) {
 ## Best Practices
 
 1. **Use Scope for context**: Share data without prop drilling
-2. **Memoize expensive computations**: Use `computed.memo` for performance
+2. **Memoize expensive computations**: Use `memoize` for performance
 3. **Keep components focused**: Single responsibility principle
 4. **Use TypeScript strictly**: Enable strict mode for better type safety
 5. **Handle edge cases**: Always validate props and state

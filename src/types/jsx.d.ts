@@ -11,10 +11,7 @@ declare global {
 		each: T[] | (() => T[])
 		children: (item: T) => JSX.Children
 	}) => JSX.Element
-	type ComponentFunction = (
-		props: any,
-		scope: Record<PropertyKey, any>
-	) => JSX.Element | JSX.Element[]
+	type ComponentFunction = (props: any, scope: Record<PropertyKey, any>) => JSX.Element
 	namespace JSX {
 		// biome-ignore lint/suspicious/noConfusingVoidType: Void ends up automatically
 		type Child = Node | string | number | JSX.Element | void | false
@@ -24,11 +21,10 @@ declare global {
 			children: any
 		}
 		type Element = {
-			render(scope?: Record<PropertyKey, any>): Node[]
-			mount?: (target: Node | Node[], scope: Record<PropertyKey, any>) => void
+			render(scope?: Record<PropertyKey, any>): Node | Node[]
+			mount?: ((target: Node | Node[]) => ScopedCallback)[]
 			condition?: any
 			else?: true
-			this?: (partial: Node | Node[]) => void
 			// categories
 			when?: Record<string, any> // when:condition
 			if?: Record<string, any> // if:value
@@ -39,14 +35,14 @@ declare global {
 		}
 		// Override the default JSX children handling
 		// Allow any children type so components can accept function-as-children
-		type IntrinsicAttributes =
+		type IntrinsicAttributes<N extends Node> =
 			| { children: Children }
 			| ({
 					children?: any
 					// Meta: capture component reference on render
-					this?: Node | Node[]
+					this?: N
 					if?: boolean
-					use?: (target: Node | Node[], scope: Record<PropertyKey, any>) => void
+					use?: (target: N) => void
 					else?: true
 					when?: any
 			  } & {
@@ -175,7 +171,7 @@ declare global {
 		}
 
 		// Base interface for common HTML attributes
-		type BaseHTMLAttributes = IntrinsicAttributes &
+		type BaseHTMLAttributes<N extends Element = HTMLElement> = IntrinsicAttributes<N> &
 			GlobalHTMLAttributes &
 			MouseReactiveHTMLAttributes & {
 				children?: Children
@@ -222,11 +218,16 @@ declare global {
 			type: 'checkbox' | 'radio'
 			checked?: boolean
 			value?: string
-			'update:checked'?(value: boolean): void
+			'update:checked'?(checked?: boolean): void
 		}
-		interface IntrinsicElements {
+		// Provide default element-specific attributes for all known HTML tags
+		type HTMLTagElementsMap = {
+			[K in keyof HTMLElementTagNameMap]?: BaseHTMLAttributes<HTMLElementTagNameMap[K]>
+		}
+
+		interface IntrinsicElements extends HTMLTagElementsMap {
 			// Form Elements
-			input: BaseHTMLAttributes &
+			input: BaseHTMLAttributes<HTMLInputElement> &
 				(InputNumber | InputString | InputBoolean) & {
 					name?: string
 					placeholder?: string
@@ -255,7 +256,7 @@ declare global {
 					onSearch?: (event: Event) => void
 				}
 
-			textarea: BaseHTMLAttributes & {
+			textarea: BaseHTMLAttributes<HTMLTextAreaElement> & {
 				value?: string
 				placeholder?: string
 				disabled?: boolean
@@ -277,7 +278,7 @@ declare global {
 				onInvalid?: (event: Event) => void
 			}
 
-			select: BaseHTMLAttributes & {
+			select: BaseHTMLAttributes<HTMLSelectElement> & {
 				value?: any
 				disabled?: boolean
 				required?: boolean
@@ -290,7 +291,7 @@ declare global {
 				onInvalid?: (event: Event) => void
 			}
 
-			button: BaseHTMLAttributes & {
+			button: BaseHTMLAttributes<HTMLButtonElement> & {
 				type?: 'button' | 'submit' | 'reset'
 				disabled?: boolean
 				autoFocus?: boolean
@@ -304,7 +305,7 @@ declare global {
 				value?: string
 			}
 
-			form: BaseHTMLAttributes & {
+			form: BaseHTMLAttributes<HTMLFormElement> & {
 				action?: string
 				method?: 'get' | 'post' | 'put' | 'delete' | 'patch'
 				enctype?: string
@@ -320,21 +321,21 @@ declare global {
 				onInvalid?: (event: Event) => void
 			}
 
-			label: BaseHTMLAttributes & {
+			label: BaseHTMLAttributes<HTMLLabelElement> & {
 				htmlFor?: string
 				form?: string
 			}
 
-			fieldset: BaseHTMLAttributes & {
+			fieldset: BaseHTMLAttributes<HTMLFieldSetElement> & {
 				disabled?: boolean
 				form?: string
 				name?: string
 			}
 
-			legend: BaseHTMLAttributes & {}
+			legend: BaseHTMLAttributes<HTMLLegendElement> & {}
 
 			// Media Elements
-			img: BaseHTMLAttributes & {
+			img: BaseHTMLAttributes<HTMLImageElement> & {
 				src?: string
 				alt?: string
 				width?: number | string
@@ -350,7 +351,7 @@ declare global {
 				onAbort?: (event: Event) => void
 			}
 
-			video: BaseHTMLAttributes & {
+			video: BaseHTMLAttributes<HTMLVideoElement> & {
 				src?: string
 				poster?: string
 				preload?: 'none' | 'metadata' | 'auto'
@@ -387,7 +388,7 @@ declare global {
 				onSeeking?: (event: Event) => void
 			}
 
-			audio: BaseHTMLAttributes & {
+			audio: BaseHTMLAttributes<HTMLAudioElement> & {
 				src?: string
 				preload?: 'none' | 'metadata' | 'auto'
 				autoplay?: boolean
@@ -421,7 +422,7 @@ declare global {
 			}
 
 			// Interactive Elements
-			a: BaseHTMLAttributes & {
+			a: BaseHTMLAttributes<HTMLAnchorElement> & {
 				href?: string
 				target?: '_blank' | '_self' | '_parent' | '_top' | string
 				rel?: string
@@ -432,18 +433,18 @@ declare global {
 			}
 
 			// Additional HTML elements with notable attributes
-			dialog: BaseHTMLAttributes & {
+			dialog: BaseHTMLAttributes<HTMLDialogElement> & {
 				open?: boolean
 				onCancel?: (event: Event) => void
 				onClose?: (event: Event) => void
 			}
 
-			details: BaseHTMLAttributes & {
+			details: BaseHTMLAttributes<HTMLDetailsElement> & {
 				open?: boolean
 				onToggle?: (event: Event) => void
 			}
 
-			track: BaseHTMLAttributes & {
+			track: BaseHTMLAttributes<HTMLTrackElement> & {
 				default?: boolean
 				kind?: 'subtitles' | 'captions' | 'descriptions' | 'chapters' | 'metadata'
 				src?: string
@@ -451,7 +452,7 @@ declare global {
 				label?: string
 			}
 
-			script: BaseHTMLAttributes & {
+			script: BaseHTMLAttributes<HTMLScriptElement> & {
 				src?: string
 				type?: string
 				async?: boolean
@@ -464,7 +465,7 @@ declare global {
 				onError?: (event: Event) => void
 			}
 
-			iframe: BaseHTMLAttributes & {
+			iframe: BaseHTMLAttributes<HTMLIFrameElement> & {
 				src?: string
 				srcDoc?: string
 				name?: string
@@ -479,30 +480,30 @@ declare global {
 				onError?: (event: Event) => void
 			}
 
-			ol: BaseHTMLAttributes & {
+			ol: BaseHTMLAttributes<HTMLOListElement> & {
 				reversed?: boolean
 				start?: number
 				type?: '1' | 'a' | 'A' | 'i' | 'I'
 			}
 
-			option: BaseHTMLAttributes & {
+			option: BaseHTMLAttributes<HTMLOptionElement> & {
 				disabled?: boolean
 				selected?: boolean
 				label?: string
 				value?: string
 			}
 
-			optgroup: BaseHTMLAttributes & {
+			optgroup: BaseHTMLAttributes<HTMLOptGroupElement> & {
 				disabled?: boolean
 				label?: string
 			}
 
-			progress: BaseHTMLAttributes & {
+			progress: BaseHTMLAttributes<HTMLProgressElement> & {
 				value?: number | string
 				max?: number | string
 			}
 
-			meter: BaseHTMLAttributes & {
+			meter: BaseHTMLAttributes<HTMLMeterElement> & {
 				value?: number | string
 				min?: number | string
 				max?: number | string
@@ -511,7 +512,7 @@ declare global {
 				optimum?: number | string
 			}
 
-			link: BaseHTMLAttributes & {
+			link: BaseHTMLAttributes<HTMLLinkElement> & {
 				rel?: string
 				href?: string
 				as?: string
@@ -529,7 +530,7 @@ declare global {
 				onError?: (event: Event) => void
 			}
 
-			source: BaseHTMLAttributes & {
+			source: BaseHTMLAttributes<HTMLSourceElement> & {
 				src?: string
 				type?: string
 				srcSet?: string
@@ -537,7 +538,7 @@ declare global {
 				media?: string
 			}
 
-			area: BaseHTMLAttributes & {
+			area: BaseHTMLAttributes<HTMLAreaElement> & {
 				alt?: string
 				coords?: string
 				download?: string | boolean
@@ -548,32 +549,32 @@ declare global {
 				referrerPolicy?: string
 			}
 
-			map: BaseHTMLAttributes & {
+			map: BaseHTMLAttributes<HTMLMapElement> & {
 				name?: string
 			}
 
-			canvas: BaseHTMLAttributes & {
+			canvas: BaseHTMLAttributes<HTMLCanvasElement> & {
 				width?: number | string
 				height?: number | string
 			}
 
-			col: BaseHTMLAttributes & { span?: number }
-			colgroup: BaseHTMLAttributes & { span?: number }
+			col: BaseHTMLAttributes<HTMLTableColElement> & { span?: number }
+			colgroup: BaseHTMLAttributes<HTMLTableColElement> & { span?: number }
 			/* thead/tbody/tfoot/tr omitted since they add no extra attributes */
-			th: BaseHTMLAttributes & {
+			th: BaseHTMLAttributes<HTMLTableCellElement> & {
 				abbr?: string
 				colSpan?: number
 				rowSpan?: number
 				headers?: string
 				scope?: 'row' | 'col' | 'rowgroup' | 'colgroup' | 'auto'
 			}
-			td: BaseHTMLAttributes & {
+			td: BaseHTMLAttributes<HTMLTableCellElement> & {
 				colSpan?: number
 				rowSpan?: number
 				headers?: string
 			}
 
-			slot: BaseHTMLAttributes & { name?: string }
+			slot: BaseHTMLAttributes<HTMLSlotElement> & { name?: string }
 
 			// Common HTML attributes for all elements
 			[elemName: string]: BaseHTMLAttributes

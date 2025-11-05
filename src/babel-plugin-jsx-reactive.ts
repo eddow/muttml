@@ -119,12 +119,18 @@ export function babelPluginJsxReactive({
 										}
 									}
 									// Check if this is a simple property access for 2-way binding
-									if (t.isMemberExpression(expression) || t.isIdentifier(expression)) {
+									// Handle type assertions: `xxx as Type` or `xxx.yyy as Type`
+									let innerExpression = expression
+									if (t.isTSAsExpression(expression)) {
+										innerExpression = expression.expression
+									}
+									if (t.isMemberExpression(innerExpression) || t.isIdentifier(innerExpression)) {
 										// Auto-detect 2-way binding: transform `{this.count}`, `{state.count}`, or `{state['count']}` to `{{get: () => this.count, set: (val) => this.count = val}}`
+										// For type assertions, use the original expression in getter (with cast) but inner expression in setter (without cast)
 										const getter = t.arrowFunctionExpression([], expression)
 										const setter = t.arrowFunctionExpression(
 											[t.identifier('val')],
-											t.assignmentExpression('=', expression, t.identifier('val'))
+											t.assignmentExpression('=', innerExpression, t.identifier('val'))
 										)
 										const bindingObject = t.objectExpression([
 											t.objectProperty(t.identifier('get'), getter),
