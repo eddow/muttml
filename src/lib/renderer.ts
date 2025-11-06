@@ -12,7 +12,7 @@ import {
 import { classNames } from './classNames'
 import { namedEffect, testing } from './debug'
 import { styles } from './styles'
-import { extend, isElement, propsInto } from './utils'
+import { extended, isElement, propsInto } from './utils'
 
 export const rootScope = reactive(Object.create(null))
 
@@ -101,14 +101,14 @@ export const h = (
 				testing.renderingEvent?.('render component', componentCtor.name)
 				const givenProps = reactive(propsInto(regularProps, { children }))
 				// Set scope on the component instance
-				const childScope = extend({}, scope)
+				const childScope = extended({}, scope)
 				const rendered = componentCtor(givenProps, childScope)
 				return processChildren([rendered], childScope)
 			},
 		}
 	} else {
-		testing.renderingEvent?.('create element', tag)
-		const element = document.createElement(tag === 'debug:test' ? 'div' : tag)
+		const element = document.createElement(tag)
+		testing.renderingEvent?.('create element', tag, element)
 		if (tag === 'input') {
 			props.type ??= 'text'
 			if (typeof props.type !== 'string')
@@ -231,7 +231,7 @@ export function Scope(
 }
 export function For<T>(
 	props: {
-		each: T[]
+		each: readonly T[]
 		children: (item: T, oldItem?: JSX.Element) => JSX.Element
 	},
 	scope: Record<PropertyKey, any>
@@ -363,22 +363,16 @@ export function processChildren(
 	})
 
 	const rendered = mapped(conditioned, (partial): Node | readonly Node[] | false | undefined => {
-		if (isElement(partial)) partial = render(partial, scope)
-		if (!partial && typeof partial !== 'number') return
-		if (Array.isArray(partial)) return processChildren(partial, scope)
-		else if (partial instanceof Node) return unwrap(partial)
-		else if (typeof partial === 'string' || typeof partial === 'number') {
-			/*const old = rendered[index]
-				if (old instanceof Text) {
-					const textContent = String(partial)
-					testing.renderingEvent?.('update text node', old, textContent)
-					old.textContent = textContent
-					return old
-				}*/
-			const textNodeValue = String(partial)
+		const nodes = isElement(partial) ? render(partial, scope) : partial
+		if (!nodes && typeof nodes !== 'number') return
+		if (Array.isArray(nodes)) return processChildren(nodes, scope)
+		else if (nodes instanceof Node) return unwrap(nodes)
+		else if (typeof nodes === 'string' || typeof nodes === 'number') {
+			const textNodeValue = String(nodes)
 			testing.renderingEvent?.('create text node', textNodeValue)
 			return document.createTextNode(textNodeValue)
 		}
+		return nodes
 	})
 	// Second loop: Flatten the temporary results into final Node[]
 	return reduced(

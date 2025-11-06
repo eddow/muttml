@@ -3,7 +3,7 @@
  */
 import { effect, mapped, reactive, trackEffect } from 'mutts/src'
 import { bindApp } from './lib'
-import { extend } from './lib/utils'
+import { extended } from './lib/utils'
 
 function ResizeSandbox(_props: {}, scope: Record<PropertyKey, any>) {
 	const size = reactive({ width: 0, height: 0 })
@@ -49,7 +49,7 @@ function MiniCounter(
 	trackEffect((obj, evolution) => {
 		console.log(obj, evolution)
 	})
-	const state = extend(props, { list: [] as string[], addedText: Date.now().toString() })
+	const state = extended(props, { list: [] as string[], addedText: Date.now().toString() })
 	console.log('🎯 Counter component mounted!', { scope: scope })
 	effect(() => {
 		return () => {

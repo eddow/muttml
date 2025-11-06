@@ -34,7 +34,6 @@ export function bindApp(
 	} else {
 		actuallyBind()
 	}
-	return actuallyBind
 }
 
 Object.assign(globalThis, { h, Fragment, Scope, For })

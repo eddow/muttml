@@ -1,4 +1,4 @@
-import { memoize, reactive } from 'mutts/src'
+import { effect, memoize, reactive } from 'mutts/src'
 
 type AllOptional<T> = {
 	[K in keyof T as undefined extends T[K] ? K : never]-?: T[K]
@@ -6,7 +6,7 @@ type AllOptional<T> = {
 
 type Defaulted<T, D extends Partial<AllOptional<T>>> = Omit<T, keyof D> & Required<D>
 
-export function extend<A extends Record<PropertyKey, any>, B extends Record<PropertyKey, any>>(
+export function extended<A extends Record<PropertyKey, any>, B extends Record<PropertyKey, any>>(
 	added: A,
 	base: B
 ): A & B {
@@ -32,32 +32,30 @@ export function propsInto<P extends Record<string, any>, S extends Record<string
 	into: S = {} as S
 ): S & P {
 	for (const [key, value] of Object.entries(props || {})) {
-		if (key !== 'style' && !(key in into)) {
-			// Check for 2-way binding object {get:, set:}
-			// Properties must be configurable as the proxy might return a reactive version of it
-			if (typeof value === 'object' && value !== null && 'get' in value && 'set' in value) {
-				Object.defineProperty(into, key, {
-					get: memoize(value.get),
-					set: (newValue) => value.set(newValue),
-					enumerable: true,
-					configurable: true,
-				})
-			} else if (typeof value === 'function') {
-				// One-way binding
-				Object.defineProperty(into, key, {
-					get: memoize(value),
-					enumerable: true,
-					configurable: true,
-				})
-			} else {
-				// Static value
-				Object.defineProperty(into, key, {
-					value: value,
-					enumerable: true,
-					writable: false,
-					configurable: true,
-				})
-			}
+		// Check for 2-way binding object {get:, set:}
+		// Properties must be configurable as the proxy might return a reactive version of it
+		if (typeof value === 'object' && value !== null && 'get' in value && 'set' in value) {
+			Object.defineProperty(into, key, {
+				get: memoize(value.get),
+				set: (newValue) => value.set(newValue),
+				enumerable: true,
+				configurable: true,
+			})
+		} else if (typeof value === 'function') {
+			// One-way binding
+			Object.defineProperty(into, key, {
+				get: memoize(value),
+				enumerable: true,
+				configurable: true,
+			})
+		} else {
+			// Static value
+			Object.defineProperty(into, key, {
+				value: value,
+				enumerable: true,
+				writable: false,
+				configurable: true,
+			})
 		}
 	}
 	return into as S & P
@@ -83,4 +81,16 @@ export const array = {
 
 export function isElement(value: any): value is JSX.Element {
 	return value && typeof value === 'object' && 'render' in value
+}
+
+export function decompose<T extends Record<string, any>, U extends Record<string, any>>(
+	obj: T,
+	decomposition: (obj: T) => U
+) {
+	const result = reactive(Object.create(null))
+	effect(() => {
+		const decomposed = decomposition(obj)
+		copyObject(result, decomposed)
+	})
+	return result
 }

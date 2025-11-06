@@ -8,7 +8,7 @@ declare global {
 		scope: Record<PropertyKey, any>
 	) => JSX.Element
 	const For: <T>(props: {
-		each: T[] | (() => T[])
+		each: readonly T[] | (() => readonly T[])
 		children: (item: T) => JSX.Children
 	}) => JSX.Element
 	type ComponentFunction = (props: any, scope: Record<PropertyKey, any>) => JSX.Element
@@ -21,8 +21,8 @@ declare global {
 			children: any
 		}
 		type Element = {
-			render(scope?: Record<PropertyKey, any>): Node | Node[]
-			mount?: ((target: Node | Node[]) => ScopedCallback)[]
+			render(scope?: Record<PropertyKey, any>): Node | readonly Node[]
+			mount?: ((target: Node | readonly Node[]) => ScopedCallback)[]
 			condition?: any
 			else?: true
 			// categories

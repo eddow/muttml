@@ -4,7 +4,7 @@
 
 import { effect, trackEffect, watch } from 'mutts/src'
 import './Counter.scss'
-import { extend } from '../lib/utils'
+import { extended } from '../lib/utils'
 
 export default function CounterWebComponent(
 	props: {
@@ -26,7 +26,7 @@ export default function CounterWebComponent(
 	trackEffect((obj, evolution) => {
 		console.log(obj, evolution)
 	})
-	const state = extend(props, {
+	const state = extended(props, {
 		maxValue: 100,
 		minValue: 0,
 		step: 1,
