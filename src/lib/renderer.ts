@@ -12,7 +12,7 @@ import {
 import { classNames } from './classNames'
 import { namedEffect, testing } from './debug'
 import { styles } from './styles'
-import { extended, isElement, propsInto } from './utils'
+import { extend, isElement, propsInto } from './utils'
 
 export const rootScope = reactive(Object.create(null))
 
@@ -54,7 +54,12 @@ export const h = (
 				const setComponent = value?.set
 				if (typeof setComponent !== 'function')
 					throw new Error('`this` attribute must be an L-value')
-				collectedCategories.mount = [setComponent, ...(collectedCategories.mount || [])]
+				collectedCategories.mount = [
+					(v: any) => {
+						setComponent(v)
+					},
+					...(collectedCategories.mount || []),
+				]
 				break
 			}
 			case 'else':
@@ -92,16 +97,16 @@ export const h = (
 		}
 	}
 	let mountObject: any
+	const componentCtor = typeof tag === 'string' ? intrinsicComponentAliases[tag] : tag
 	// If we were given a component function directly, render it
-	if (typeof tag === 'function') {
-		const componentCtor = tag
+	if (componentCtor) {
 		// Effect for styles - only updates style container
 		mountObject = {
 			render(scope: Record<PropertyKey, any> = rootScope) {
 				testing.renderingEvent?.('render component', componentCtor.name)
 				const givenProps = reactive(propsInto(regularProps, { children }))
 				// Set scope on the component instance
-				const childScope = extended({}, scope)
+				const childScope = extend(scope)
 				const rendered = componentCtor(givenProps, childScope)
 				return processChildren([rendered], childScope)
 			},
@@ -220,34 +225,47 @@ export const h = (
 	}
 	return Object.defineProperties(mountObject, Object.getOwnPropertyDescriptors(collectedCategories))
 }
-export function Scope(
-	props: { children?: any; [key: string]: any },
-	scope: Record<PropertyKey, any>
-) {
-	effect(function scopeEffect() {
-		for (const [key, value] of Object.entries(props)) if (key !== 'children') scope[key] = value
-	})
-	return props.children
-}
-export function For<T>(
-	props: {
-		each: readonly T[]
-		children: (item: T, oldItem?: JSX.Element) => JSX.Element
+
+const intrinsicComponentAliases = extend(null, {
+	scope(props: { children?: any; [key: string]: any }, scope: Record<PropertyKey, any>) {
+		effect(function scopeEffect() {
+			for (const [key, value] of Object.entries(props)) if (key !== 'children') scope[key] = value
+		})
+		return props.children
 	},
-	scope: Record<PropertyKey, any>
-) {
-	const body = Array.isArray(props.children) ? props.children[0] : props.children
-	const cb = body() as (item: T, oldItem?: JSX.Element) => JSX.Element
-	const memoized = memoize(cb as (item: T & object) => JSX.Element)
-	const array = isNonReactive(props.each)
-		? props.each.map((item) => cb(item))
-		: mapped(props.each, (item, index, output: readonly JSX.Element[]) =>
-				['object', 'symbol', 'function'].includes(typeof item)
-					? memoized(item as T & object)
-					: cb(item, output[index])
-			)
-	return { render: () => processChildren(array, scope) }
-}
+	dynamic(
+		props: { tag: string; children?: JSX.Children } & Record<string, any>,
+		_scope: Record<PropertyKey, any>
+	) {
+		const { tag, children, ...rest } = props
+		const childArray: Child[] = Array.isArray(children)
+			? (children as unknown as Child[])
+			: children === undefined
+				? []
+				: [children as unknown as Child]
+		return h(tag, rest, ...childArray)
+	},
+
+	for<T>(
+		props: {
+			each: readonly T[]
+			children: (item: T, oldItem?: JSX.Element) => JSX.Element
+		},
+		scope: Record<PropertyKey, any>
+	) {
+		const body = Array.isArray(props.children) ? props.children[0] : props.children
+		const cb = body() as (item: T, oldItem?: JSX.Element) => JSX.Element
+		const memoized = memoize(cb as (item: T & object) => JSX.Element)
+		const array = isNonReactive(props.each)
+			? props.each.map((item) => cb(item))
+			: mapped(props.each, (item, index, output: readonly JSX.Element[]) =>
+					['object', 'symbol', 'function'].includes(typeof item)
+						? memoized(item as T & object)
+						: cb(item, output[index])
+				)
+		return { render: () => processChildren(array, scope) }
+	},
+})
 export const Fragment = (props: { children: JSX.Element[] }, scope: Record<PropertyKey, any>) => ({
 	render: () => processChildren(props.children, scope),
 })

@@ -68,6 +68,22 @@ function Button(props: {
 }
 ```
 
+## Dynamic Tags
+
+When the wrapper tag needs to change at runtime, use the `<dynamic>` helper component. Pass the tag name (or component) via the `is` prop and forward any additional attributes/children:
+
+```tsx
+function Wrapper(props: { as?: keyof JSX.IntrinsicElements }) {
+  return (
+    <dynamic tag={props.as ?? 'div'} class="wrapper">
+      {props.children}
+    </dynamic>
+  )
+}
+```
+
+`dynamic` forwards everything to the rendered target, so props such as `class`, `style`, `if`, and `use:` behave exactly as if you had written the tag directly.
+
 ## Props Types
 
 ### Static Props

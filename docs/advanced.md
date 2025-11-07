@@ -29,12 +29,12 @@ function App() {
 Strict-compare a value against `scope.name`:
 
 ```tsx
-<Scope role="admin">
+<scope role="admin">
   <>
     <div if:role={"admin"}>Admin Dashboard</div>
     <div else>User Dashboard</div>
   </>
-</Scope>
+</scope>
 ```
 
 ### `when:name={arg}` calling a scope function
@@ -78,9 +78,11 @@ When a component renders its children, it creates a new scope that inherits from
 3. **Siblings share scope**: Components at the same level share the same scope
 4. **Scope changes propagate**: Changes to scope in a parent are immediately visible to all descendants
 
-### The `<Scope>` Component
+If you need to manually create a derived scope, call `extend(scope, additions)`—it returns a reactive object that prototypes the original scope while layering your overrides.
 
-The `<Scope>` component is a special component that forwards its children but adds its props to the scope. It doesn't render any DOM elements itself - it just injects its attributes into the scope for its children to use.
+### The `<scope>` Component
+
+The `<scope>` component is a special component that forwards its children but adds its props to the scope. It doesn't render any DOM elements itself - it just injects its attributes into the scope for its children to use.
 
 **Usage example:**
 
@@ -89,10 +91,10 @@ import { Scope } from '../lib/renderer'
 
 function App() {
   return (
-    <Scope user="Alice" role="admin">
+    <scope user="Alice" role="admin">
       <UserInfo />
       <AdminPanel />
-    </Scope>
+    </scope>
   )
 }
 
@@ -109,7 +111,7 @@ function AdminPanel(props: any, scope: Record<PropertyKey, any>) {
 }
 ```
 
-Since `<Scope>` doesn't render any wrapper, this renders as flat DOM - just the children without any extra `<div>` or other container.
+Since `<scope>` doesn't render any wrapper, this renders as flat DOM - just the children without any extra `<div>` or other container.
 
 ### Scope Inheritance Example
 
@@ -141,10 +143,10 @@ function App() {
   const state = reactive({ isLoggedIn: true, role: 'admin' })
   
   return (
-    <Scope isLoggedIn={state.isLoggedIn} role={state.role}>
+    <scope isLoggedIn={state.isLoggedIn} role={state.role}>
       <Header />
       <MainContent />
-    </Scope>
+    </scope>
   )
 }
 
@@ -171,7 +173,7 @@ function MainContent(props: any, scope: Record<PropertyKey, any>) {
 
 ### for Loops
 
-Use the `<For>` component for reactive iteration:
+Use the `<for>` component for reactive iteration:
 
 ```tsx
 function TodoList() {
@@ -182,13 +184,13 @@ function TodoList() {
   
   return (
     <div>
-      <For each={todos}>
+      <for each={todos}>
         {(todo) => (
           <div key={todo.id}>
             {todo.text}
           </div>
         )}
-      </For>
+      </for>
     </div>
   )
 }

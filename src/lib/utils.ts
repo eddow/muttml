@@ -6,12 +6,20 @@ type AllOptional<T> = {
 
 type Defaulted<T, D extends Partial<AllOptional<T>>> = Omit<T, keyof D> & Required<D>
 
-export function extended<A extends Record<PropertyKey, any>, B extends Record<PropertyKey, any>>(
-	added: A,
-	base: B
-): A & B {
-	return reactive(Object.create(base, Object.getOwnPropertyDescriptors(added)))
+export function extend<
+	A extends Record<PropertyKey, any>,
+	B extends Record<PropertyKey, any> | null,
+>(base: B, added?: A): A & B {
+	return reactive(Object.create(base, Object.getOwnPropertyDescriptors(added || {})))
 }
+
+export function defaulted<T, D extends Partial<AllOptional<T>>>(
+	base: T,
+	defaults: D
+): Defaulted<T, D> {
+	return Object.setPrototypeOf(base, defaults)
+}
+
 type PropsDesc<P extends Record<string, any>> = {
 	[K in keyof P]:
 		| P[K]

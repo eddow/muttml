@@ -48,7 +48,7 @@ The JSX pragma function that creates JSX elements. Automatically transforms JSX 
 
 ### `defaulted(value, defaults)`
 
-Creates a proxy that provides default values for undefined properties. This is the primary utility for handling optional props in components.
+Changes the prototype of `value` in order to provides default values for undefined properties. This is the primary utility for handling optional props in components.
 
 **Parameters:**
 - `value` - The object to wrap
@@ -64,7 +64,25 @@ const props = defaulted(inputProps, {
 })
 ```
 
-**Note:** Other utilities like `propsInto` and `classNames` are for internal framework use only and should not be imported or used directly in your code.
+### `extend(base, additions?)`
+
+Creates a reactive object that inherits from `base` via the prototype chain, optionally layering additional properties. This is useful when you need to derive a child scope or share stateful helpers without copying values.
+
+**Parameters:**
+- `base` - The object to inherit from (commonly a scope)
+- `additions` - Optional object whose own properties are defined on the new instance
+
+**Returns:** Reactive object that prototypes `base` and exposes any `additions`
+
+**Example:**
+```ts
+const childScope = extend(parentScope, {
+  role: 'admin',
+  canEdit: () => parentScope.user?.role === 'admin'
+})
+```
+
+
 
 ## Array Utilities
 
@@ -109,7 +127,7 @@ trackEffect((obj, evolution) => {
 
 Notes
 - Use fragments (`<>...</>`) to group multiple `if`/`else if`/`else` branches for a component without adding wrapper DOM.
-- `scope` can be provided via the `<Scope>` component or programmatically within components.
+- `scope` can be provided via the `<scope>` component or programmatically within components.
 
 Examples
 ```tsx
@@ -117,12 +135,12 @@ Examples
 <div if={state.isLoggedIn}>Welcome back</div>
 
 // Compare against scope
-<Scope role="admin">
+<scope role="admin">
   <>
     <div if:role={"admin"}>Admin Panel</div>
     <div else>User Panel</div>
   </>
-</Scope>
+</scope>
 
 // when: calls scope method
 function App(_p: {}, scope: Record<PropertyKey, any>) {
@@ -223,27 +241,27 @@ scope.resize = (target, value, scope) => {
 
 ## Control Flow Components
 
-### `<For each={array}>`
+### `<for each={array}>`
 
 Iterate over a reactive array.
 
 **Example:**
 ```tsx
-<For each={items}>
+<for each={items}>
   {(item) => <div>{item.name}</div>}
-</For>
+</for>
 ```
 
-### `<Scope>`
+### `<scope>`
 
 Creates a scope for conditional rendering.
 
 **Example:**
 ```tsx
-<Scope user="Alice" role="admin">
+<scope user="Alice" role="admin">
   <Component1 />
   <Component2 />
-</Scope>
+</scope>
 ```
 
 ### `<Fragment>` or `<>`

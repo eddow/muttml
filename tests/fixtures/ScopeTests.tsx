@@ -1,5 +1,4 @@
 import { reactive } from 'mutts/src'
-import { Scope, For } from '../../src/lib/index.ts'
 
 const state = reactive({
 	visible: true,
@@ -55,7 +54,7 @@ const ScopeFixtureApp = () => (
 			<div if={state.items.length > 0} class="has-items">
 				<p>Items:</p>
 				<ul>
-					<For each={state.items}>{item => <li>{item}</li>}</For>
+					<for each={state.items}>{item => <li>{item}</li>}</for>
 				</ul>
 			</div>
 			<div else class="no-items">

@@ -18,11 +18,11 @@ This guide highlights how Pounce‑TS (with `mutts` reactivity) differs from Vue
 
 ### Control Flow and Lists
 - **Attributes for control flow**: `if={...}`, `if:name={...}`, `when:name={...}`, `else`, `else if={...}`, `else when={...}` inside fragments. Vue uses `v-if`, `v-else-if`, `v-else`.
-- **Lists**: Use `<For each={array}>` or `mapped(array, fn)` (optionally with `memoize`). Vue uses `v-for` with `:key`; Pounce does not require keys in typical cases.
+- **Lists**: Use `<for each={array}>` or `mapped(array, fn)` (optionally with `memoize`). Vue uses `v-for` with `:key`; Pounce does not require keys in typical cases.
 
 ### Context/Scope vs provide/inject
 - **Reactive scope inheritance**: Components receive a prototype‑inherited reactive `scope`. Components can set `scope.foo = ...` and descendants see it. Vue uses `provide/inject` (explicit), not prototype inheritance.
-- **`<Scope>` helper**: Adds values/functions to `scope` for descendants without extra DOM.
+- **`<scope>` helper**: Adds values/functions to `scope` for descendants without extra DOM.
 
 ### Refs and Directives
 - **Refs via `this`**: `this={sink}` receives `HTMLElement` (elements) or `Node | Node[]` (components). Vue uses `ref`/`template ref` objects.
@@ -37,7 +37,7 @@ This guide highlights how Pounce‑TS (with `mutts` reactivity) differs from Vue
 
 ### Quick mapping
 - **Derived state**: `memoize` vs `computed`.
-- **Lists**: `<For>`/`mapped` vs `v-for`.
+- **Lists**: `<for>`/`mapped` vs `v-for`.
 - **Two‑way input**: auto get/set vs `v-model`.
 - **Context**: reactive `scope` vs provide/inject.
 - **Rendering**: direct DOM vs VDOM.

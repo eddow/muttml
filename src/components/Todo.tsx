@@ -4,8 +4,7 @@
 
 import { effect, memoize, trackEffect } from 'mutts/src'
 import './Todo.scss'
-import { array, extended } from '../lib/utils'
-import { Scope } from './controlFlow'
+import { array, defaulted } from '../lib/utils'
 
 interface Todo {
 	id: number
@@ -30,7 +29,7 @@ export default function TodoWebComponent(
 	trackEffect((obj, evolution) => {
 		console.log(obj, evolution)
 	})
-	const state = extended(props, {
+	const state = defaulted(props, {
 		placeholder: 'Add a new todo...',
 		showFilters: true,
 		showClearCompleted: true,
@@ -132,7 +131,7 @@ export default function TodoWebComponent(
 			{/* Todo list */}
 			<>
 				<div if={filteredTodos().length > 0} class="todo-list">
-					<For each={filteredTodos()}>
+					<for each={filteredTodos()}>
 						{(todo) => (
 							<div class="todo-item">
 								{console.log('render', todo.text)}
@@ -143,7 +142,7 @@ export default function TodoWebComponent(
 								</button>
 							</div>
 						)}
-					</For>
+					</for>
 				</div>
 				<div else class="empty-message">
 					{state.todos.length === 0 ? 'No todos yet. Add one above!' : `No ${state.filter} todos.`}
@@ -151,13 +150,11 @@ export default function TodoWebComponent(
 			</>
 
 			{/* Clear completed section */}
-			<Scope>
-				<div if={state.showClearCompleted && completedCount() > 0} class="clear-section">
-					<button class="clear-button" onClick={clearCompleted}>
-						Clear {completedCount()} completed
-					</button>
-				</div>
-			</Scope>
+			<div if={state.showClearCompleted && completedCount() > 0} class="clear-section">
+				<button class="clear-button" onClick={clearCompleted}>
+					Clear {completedCount()} completed
+				</button>
+			</div>
 		</>
 	)
 }

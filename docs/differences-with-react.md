@@ -27,12 +27,12 @@ This guide highlights how Pounce‑TS (powered by the `mutts` reactivity engine)
   - `if:name={value}` (strict comparison against `scope.name`)
   - `when:name={arg}` (calls `scope[name](arg)` and checks truthiness)
   - `else`, `else if={...}` and `else when={...}` chaining inside a fragment
-- **Lists**: Prefer `<For each={array}>` with a render function. You can also use `mapped(array, fn)` for reactive mappings; combine with `memoize` for stable item rendering when needed. Keys are not required; stability is handled by the renderer/memoization and, if keys are needed, mutts offers a `register` class (extended array with key)
+- **Lists**: Prefer `<for each={array}>` with a render function. You can also use `mapped(array, fn)` for reactive mappings; combine with `memoize` for stable item rendering when needed. Keys are not required; stability is handled by the renderer/memoization and, if keys are needed, mutts offers a `register` class (extended array with key)
 
 ### Scope vs Context
 - **Scope inheritance**: Instead of React Context Providers, Pounce‑TS uses a prototype‑inherited, reactive `scope` object passed to components.
   - Components can directly modify their `scope` (e.g., `scope.myContextualValue = { happy: true }`), and descendants immediately see those changes.
-  - Use `<Scope ...>` to inject values/functions into the `scope` for descendants without a wrapper node.
+  - Use `<scope ...>` to inject values/functions into the `scope` for descendants without a wrapper node.
   - Conditional attributes (`if:name`, `when:name`) and mixins (`use:name`) read from `scope`.
 
 ### Refs and Mount Hooks
@@ -60,9 +60,9 @@ This guide highlights how Pounce‑TS (powered by the `mutts` reactivity engine)
 - **Props**: writeable, support two‑way updates vs. read‑only in React.
 - **Events**: native DOM events vs. synthetic.
 - **Control flow**: declarative attributes (`if`, `else`, `when`) vs. inline JS/ternaries.
-- **Context**: prototype‑inherited reactive `scope` and `<Scope>` vs. Context API.
+- **Context**: prototype‑inherited reactive `scope` and `<scope>` vs. Context API.
 - **Refs**: `this={refSink}` receiving `HTMLElement | Node | Node[]` vs. `ref` objects.
-- **Lists**: `<For>`/`mapped(+memoize)` vs. `array.map` with keys.
+- **Lists**: `<for>`/`mapped(+memoize)` vs. `array.map` with keys.
 - **Rendering**: direct DOM updates (no VDOM) vs. VDOM diffing.
 
 ### Further Reading

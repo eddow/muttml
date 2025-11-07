@@ -1,5 +1,4 @@
 import { reactive } from 'mutts/src'
-import { For } from '../../src/lib/index.ts'
 
 type ChildNode = {
 	id: number
@@ -72,7 +71,7 @@ window.__pounceFixture = fixtureControls
 
 const ChildList = () => (
 	<ul data-testid="child-list" aria-live="polite">
-		<For each={state.nodes}>{(node: ChildNode) => <li data-node-id={node.id}>{node.label}</li>}</For>
+		<for each={state.nodes}>{(node: ChildNode) => <li data-node-id={node.id}>{node.label}</li>}</for>
 	</ul>
 )
 
@@ -103,7 +102,7 @@ const ForFixtureApp = () => (
 		<section class="events">
 			<h2>Events</h2>
 			<ul data-testid="event-log">
-				<For each={state.log}>{(entry: string) => <li data-event={entry}>{entry}</li>}</For>
+				<for each={state.log}>{(entry: string) => <li data-event={entry}>{entry}</li>}</for>
 			</ul>
 		</section>
 	</main>

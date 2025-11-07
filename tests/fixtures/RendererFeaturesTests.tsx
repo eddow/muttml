@@ -1,5 +1,4 @@
 import { reactive } from 'mutts/src'
-import { Scope } from '../../src/lib/index.ts'
 
 const state = reactive({
 	flag: true,
@@ -190,11 +189,11 @@ const RendererFeaturesFixture = (_: any, scope: Record<PropertyKey, any>) => {
 				<InputsDemo />
                 <UseCallbackDemo />
 				<section data-testid="if-else-topic-demo">
-					<Scope topic={state.topic}>
+					<scope topic={state.topic}>
 						<div if:topic="Alice" data-testid="branch-alice">Alice branch</div>
 						<div if:topic="Bob" data-testid="branch-bob">Bob branch</div>
 						<div else data-testid="branch-else">Else branch</div>
-					</Scope>
+					</scope>
 				</section>
 				<section data-testid="if-else-bool-demo">
 					<div if={state.topic === 'Alice'} data-testid="branch-alice">Alice branch</div>

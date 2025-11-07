@@ -30,6 +30,9 @@ const counters: number[] = []
 const debugMutts = false
 if (debugMutts) {
 	Object.assign(reactiveOptions, {
+		garbageCollected(fn: Function) {
+			console.log('garbageCollected:', fn.name || fn.toString())
+		},
 		chain(targets: Function[], caller?: Function) {
 			console.groupCollapsed(
 				caller

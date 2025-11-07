@@ -3,14 +3,6 @@ import type { StyleInput } from '@/lib/styles'
 declare global {
 	const h: (type: any, props?: any, ...children: any[]) => JSX.Element
 	const Fragment: (props: { children: any }) => any
-	const Scope: (
-		props: { children?: JSX.Children; [key: string]: any },
-		scope: Record<PropertyKey, any>
-	) => JSX.Element
-	const For: <T>(props: {
-		each: readonly T[] | (() => readonly T[])
-		children: (item: T) => JSX.Children
-	}) => JSX.Element
 	type ComponentFunction = (props: any, scope: Record<PropertyKey, any>) => JSX.Element
 	namespace JSX {
 		// biome-ignore lint/suspicious/noConfusingVoidType: Void ends up automatically
@@ -33,6 +25,7 @@ declare global {
 		interface ElementClass {
 			template: any
 		}
+		type ElementType = string | ComponentFunction
 		// Override the default JSX children handling
 		// Allow any children type so components can accept function-as-children
 		type IntrinsicAttributes<N extends Node> =
@@ -225,7 +218,22 @@ declare global {
 			[K in keyof HTMLElementTagNameMap]?: BaseHTMLAttributes<HTMLElementTagNameMap[K]>
 		}
 
+		interface ForElementProps<T = any> {
+			each: readonly T[] | (() => readonly T[])
+			children: (item: T, oldItem?: JSX.Element) => JSX.Elem
+		}
 		interface IntrinsicElements extends HTMLTagElementsMap {
+			[elementName: string]: BaseHTMLAttributes<HTMLElement>
+			dynamic: BaseHTMLAttributes<HTMLElement> & {
+				tag: ElementType | string
+				children?: Children
+				[key: string]: any
+			}
+			scope: IntrinsicAttributes<Node | Node[]> & {
+				children?: Children
+				[key: string]: any
+			}
+			for: IntrinsicAttributes<Node[]> & ForElementProps
 			// Form Elements
 			input: BaseHTMLAttributes<HTMLInputElement> &
 				(InputNumber | InputString | InputBoolean) & {

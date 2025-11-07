@@ -2,8 +2,7 @@
  * Main entry point for Pounce-TS application
  */
 import { effect, mapped, reactive, trackEffect } from 'mutts/src'
-import { bindApp } from './lib'
-import { extended } from './lib/utils'
+import { bindApp, defaulted } from './lib'
 
 function ResizeSandbox(_props: {}, scope: Record<PropertyKey, any>) {
 	const size = reactive({ width: 0, height: 0 })
@@ -49,8 +48,8 @@ function MiniCounter(
 	trackEffect((obj, evolution) => {
 		console.log(obj, evolution)
 	})
-	const state = extended(props, { list: [] as string[], addedText: Date.now().toString() })
-	console.log('🎯 Counter component mounted!', { scope: scope })
+	const state = defaulted(props, { list: [] as string[], addedText: Date.now().toString() })
+	console.log('🎯 Mini counter component mounted!', { scope: scope })
 	effect(() => {
 		return () => {
 			console.log('🎯 Counter component unmounted!', { finalList: state.list.join(', ') })
@@ -65,13 +64,13 @@ function MiniCounter(
 	}
 	return (
 		<>
-			<debug:test>
+			<div>
 				{mapped(state.list, (value, index) => (
 					<button class="remove" onClick={() => state.list.splice(index, 1)}>
 						{value}
 					</button>
 				))}
-			</debug:test>
+			</div>
 			<div>
 				<input type="text" value={state.addedText} />
 				<button class="add" onClick={add}>

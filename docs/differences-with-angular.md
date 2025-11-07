@@ -18,11 +18,11 @@ This guide highlights how Pounce‑TS (with `mutts` reactivity) differs from Ang
 
 ### Control Flow and Lists
 - **Attributes for control flow**: `if={...}`, `if:name={...}`, `when:name={...}`, `else`, `else if={...}`, `else when={...}`. Angular uses `@if`/`*ngIf` and `@else` (or older structural directives), and `@for`/`*ngFor` with `trackBy`.
-- **Lists**: Use `<For each={array}>` or `mapped(array, fn)` (optionally with `memoize`). Angular prefers `*ngFor` with `trackBy` for stability.
+- **Lists**: Use `<for each={array}>` or `mapped(array, fn)` (optionally with `memoize`). Angular prefers `*ngFor` with `trackBy` for stability.
 
 ### Context/Scope vs DI and Injection
 - **Reactive scope inheritance**: Components receive a prototype‑inherited reactive `scope`. Components can set `scope.foo = ...` and descendants see it. Angular uses DI/injector hierarchy and `@Input()`/providers; no prototype scope.
-- **`<Scope>` helper**: Adds values/functions to `scope` for descendants without extra DOM.
+- **`<scope>` helper**: Adds values/functions to `scope` for descendants without extra DOM.
 
 ### Refs and Directives
 - **Refs via `this`**: `this={sink}` receives `HTMLElement` (elements) or `Node | Node[]` (components). Angular uses `@ViewChild`/`ElementRef` and template reference variables.
@@ -36,7 +36,7 @@ This guide highlights how Pounce‑TS (with `mutts` reactivity) differs from Ang
 
 ### Quick mapping
 - **Derived state**: `memoize` vs Angular `computed` (signals).
-- **Lists**: `<For>`/`mapped` vs `*ngFor`/`@for`.
+- **Lists**: `<for>`/`mapped` vs `*ngFor`/`@for`.
 - **Two‑way input**: auto get/set vs `[(ngModel)]` or event bindings.
 - **Context**: reactive `scope` vs DI/injector tree.
 - **Rendering**: direct DOM vs compiled instructions + change detection.
