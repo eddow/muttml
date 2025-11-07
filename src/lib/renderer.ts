@@ -14,7 +14,8 @@ import { namedEffect, testing } from './debug'
 import { styles } from './styles'
 import { extend, isElement, propsInto } from './utils'
 
-export const rootScope = reactive(Object.create(null))
+export type Scope = Record<PropertyKey, any>
+export const rootScope: Scope = reactive(Object.create(null))
 
 function listen(
 	target: EventTarget,

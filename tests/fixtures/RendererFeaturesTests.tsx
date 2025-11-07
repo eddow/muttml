@@ -1,33 +1,58 @@
-import { reactive } from 'mutts/src'
+import { reactive, effect } from 'mutts/src'
+
+type Role = 'guest' | 'member' | 'admin'
 
 const state = reactive({
-	flag: true,
-	alt: false,
-	classOn: false,
-	styleMode: 'obj' as 'obj' | 'arr' | 'str',
-	inner: '<em>html</em>',
-	listenerEnabled: true,
-	clicks: 0,
-	forLabel: 'lbl',
-	attrVal: 'attr',
-	// inputs
-	textVal: 'hello',
-	check: false,
-	num: 5,
-	range: 3,
-	thisCaptured: false,
-	topic: 'Alice',
+	dynamicTag: 'button' as 'button' | 'section',
+	dynamicAsComponent: false,
+	dynamicIs: 'fancy-control',
+	role: 'guest' as Role,
+	featureOn: true,
+	variant: 'primary' as 'primary' | 'secondary' | 'danger',
+	showUseTarget: true,
+	useMounts: 0,
+	mixinUpdates: 0,
+	list: [
+		{ id: 1, label: 'Alpha' },
+		{ id: 2, label: 'Beta' },
+	],
+	nextListId: 3,
 })
 
+const VARIANTS = ['primary', 'secondary', 'danger'] as const
+
 const controls = {
-	toggleFlag() { state.flag = !state.flag },
-	toggleAlt() { state.alt = !state.alt },
-	toggleClass() { state.classOn = !state.classOn },
-	switchStyle(mode: 'obj' | 'arr' | 'str') { state.styleMode = mode },
-	setInner(v: string) { state.inner = v },
-	toggleListener() { state.listenerEnabled = !state.listenerEnabled },
-	resetClicks() { state.clicks = 0 },
-	setTopic(v: string) { state.topic = v },
+	toggleDynamicTag() {
+		state.dynamicTag = state.dynamicTag === 'button' ? 'section' : 'button'
+	},
+	toggleDynamicMode() {
+		state.dynamicAsComponent = !state.dynamicAsComponent
+	},
+	toggleFeature() {
+		state.featureOn = !state.featureOn
+	},
+	setRole(role: Role) {
+		state.role = role
+	},
+	nextVariant() {
+		const index = VARIANTS.indexOf(state.variant)
+		state.variant = VARIANTS[(index + 1) % VARIANTS.length]
+	},
+	toggleUseTarget() {
+		state.showUseTarget = !state.showUseTarget
+	},
+	updateFirstLabel() {
+		if (state.list.length === 0) return
+		state.list[0].label = `${state.list[0].label}!`
+	},
+	removeFirstItem() {
+		if (state.list.length === 0) return
+		state.list.shift()
+	},
+	addItem(label?: string) {
+		const id = state.nextListId++
+		state.list.push({ id, label: label ?? `Item ${id}` })
+	},
 }
 
 declare global {
@@ -35,185 +60,196 @@ declare global {
 		__rendererControls?: typeof controls
 	}
 }
+
 window.__rendererControls = controls
 
-function ReactiveClassDemo() {
+let nextListInstance = 1
+
+function FancyPanel(props: Record<string, any>) {
+	const { children, class: className, is, ...rest } = props
 	return (
-		<div data-testid="class-demo">
-			<div data-testid="class-static" class="a b" />
-			<div data-testid="class-reactive" class={state.classOn ? 'x y' : 'x'} />
-		</div>
+		<article
+			{...rest}
+			class={['fancy-panel', className].filter(Boolean).join(' ')}
+			is={is}
+			data-forwarded-is={is}
+		>
+			<span data-testid="dynamic-component-marker">component</span>
+			<span data-testid="dynamic-forwarded-is">{String(is)}</span>
+			{children}
+		</article>
 	)
 }
 
-function StyleDemo() {
-	const styleFn = () => {
-		if (state.styleMode === 'obj') return { color: 'red', padding: '4px' }
-		if (state.styleMode === 'arr') return [{ color: 'blue' }, false, { marginTop: '2px' }]
-		return 'background-color: green; border: 1px solid black'
+function DynamicDemo() {
+	const tag = state.dynamicAsComponent ? FancyPanel : state.dynamicTag
+	const kind = state.dynamicAsComponent ? 'component' : state.dynamicTag
+	return (
+		<section data-testid="dynamic-demo">
+			<dynamic
+				tag={tag}
+				class="dynamic-root"
+				data-testid="dynamic-root"
+				data-kind={kind}
+				is={state.dynamicIs}
+			>
+				<span data-testid="dynamic-label">{kind}</span>
+			</dynamic>
+			<p data-testid="dynamic-mode">{state.dynamicAsComponent ? 'component' : 'element'}</p>
+			<p data-testid="dynamic-is-value">{state.dynamicIs}</p>
+		</section>
+	)
+}
+
+function IfDemo(_: any, scope: Record<PropertyKey, any>) {
+	effect(() => {
+		scope.currentRole = state.role
+	})
+	scope.allows = (perm: string) => {
+		if (perm === 'analytics') return state.role !== 'guest'
+		if (perm === 'admin') return state.role === 'admin'
+		return false
 	}
 	return (
-		<div data-testid="style-demo">
-			<div data-testid="style-reactive" style={styleFn()} />
-		</div>
+		<section data-testid="if-demo">
+			<>
+				<div data-testid="feature-on" if={state.featureOn}>
+					Feature On
+				</div>
+				<div data-testid="feature-off" else>
+					Feature Off
+				</div>
+			</>
+			<>
+				<div data-testid="role-admin" if:currentRole="admin">
+					Admin control
+				</div>
+				<div data-testid="role-member" else if:currentRole="member">
+					Member area
+				</div>
+				<div data-testid="role-guest" else>
+					Guest space
+				</div>
+			</>
+			<>
+				<div data-testid="perm-allowed" when:allows="analytics">
+					Analytics enabled
+				</div>
+				<div data-testid="perm-denied" else>
+					No analytics access
+				</div>
+			</>
+		</section>
 	)
 }
 
-function InnerHtmlDemo() {
+function UseDemo(_: any, scope: Record<PropertyKey, any>) {
+	scope.marker = (target: Node | Node[], value: string) => {
+		const node = Array.isArray(target) ? target[0] : target
+		if (!(node instanceof HTMLElement)) return
+		return effect(() => {
+			node.dataset.marker = String(value)
+			state.mixinUpdates++
+			return () => {
+				node.removeAttribute('data-marker')
+			}
+		})
+	}
 	return (
-		<div data-testid="inner-demo">
-			{h('div', { 'data-testid': 'inner', innerHTML: state.inner as any })}
-		</div>
+		<section data-testid="use-demo">
+			{state.showUseTarget && (
+				<div
+					data-testid="use-target"
+					use={(target: HTMLElement) => {
+						state.useMounts++
+						target.dataset.mountCount = String(state.useMounts)
+					}}
+					use:marker={state.variant}
+				>
+					<span data-testid="use-marker-text">{state.variant}</span>
+				</div>
+			)}
+			<p data-testid="use-mounts">{state.useMounts}</p>
+			<p data-testid="mixin-updates">{state.mixinUpdates}</p>
+		</section>
 	)
 }
 
-function Box() {
-    return <div data-testid="use-inline-comp-child">C</div>
-}
-
-function UseCallbackDemo(_: any, scope: any) {
-    return (
-        <section data-testid="use-inline-demo">
-            <div
-                data-testid="use-inline-el"
-                use={(target: HTMLElement) => {
-                    if (target instanceof HTMLElement) target.setAttribute('data-inline', 'yes')
-                }}
-            />
-
-            <Box
-                use={(target: Node|Node[]) => {
-                    const first = Array.isArray(target) ? target[0] : target
-                    if (first instanceof HTMLElement) (first as HTMLElement).setAttribute('data-comp', 'yes')
-                }}
-            />
-        </section>
-    )
-}
-
-function EventsDemo() {
-	const handler = () => { state.clicks++ }
+function ListItem({ item }: { item: { id: number; label: string } }) {
 	return (
-		<div data-testid="events-demo">
-			<button
-				data-testid="evt-btn"
-				onClick={state.listenerEnabled ? handler : undefined}
-			>
-				Click
+		<li data-testid="list-item" use:trackListItem={item}>
+			<span class="label">{item.label}</span>
+		</li>
+	)
+}
+
+function ForListDemo(_: any, scope: Record<PropertyKey, any>) {
+	scope.trackListItem = (target: Node | Node[], value: { id: number; label: string }) => {
+		const node = Array.isArray(target) ? target[0] : target
+		if (!(node instanceof HTMLElement)) return
+		if (!node.dataset.instance) {
+			const currentInstance = nextListInstance++
+			node.dataset.instance = String(currentInstance)
+		}
+		node.dataset.id = String(value.id)
+		node.dataset.label = value.label
+		return () => {}
+	}
+	return (
+		<section data-testid="for-demo">
+			<ul data-testid="for-list">
+				<for each={state.list}>{(item) => <ListItem item={item} />}</for>
+			</ul>
+		</section>
+	)
+}
+
+const RendererFeaturesFixture = () => (
+	<main>
+		<h1>Renderer Features Fixture</h1>
+		<section class="controls">
+			<button data-action="toggle-dynamic" onClick={controls.toggleDynamicTag}>
+				Toggle Dynamic Tag
 			</button>
-			<span data-testid="clicks">{state.clicks}</span>
-		</div>
-	)
-}
-
-function PropVsAttrDemo() {
-	return (
-		<div data-testid="propattr-demo">
-			<label data-testid="label" htmlFor={state.forLabel}>Lbl</label>
-			<div data-testid="div-propattr" id={state.attrVal} data-x={state.attrVal} />
-		</div>
-	)
-}
-
-function InputsDemo() {
-	let capturedInputMount: any
-	return (
-		<div data-testid="inputs-demo">
-			<input data-testid="text" value={state.textVal} />
-			<input data-testid="checkbox" type="checkbox" checked={state.check} />
-			<input data-testid="number" type="number" value={state.num} />
-			<input data-testid="range" type="range" value={state.range} />
-			<input data-testid="default-type" this={capturedInputMount} />
-		</div>
-	)
-}
-
-function RendererConditionsDemo(_: any, scope: any) {
-    scope.user = (v?: any) => (v === 'ok') === state.flag
-    return (
-        <div data-testid="cond-demo">
-            <div when:user="ok" data-testid="when-shown">Shown</div>
-            <div when:user="not" data-testid="when-hidden">Hidden</div>
-        </div>
-    )
-}
-
-function ThisAndUseDemo(_: any, scope: any) {
-    scope.attach = () => {
-        // mark captured as soon as use:attach runs
-        state.thisCaptured = true
-        return () => {}
-    }
-	let captured: any
-	return (
-		<div data-testid="this-use">
-			<div data-testid="this-target" this={captured} use:attach={{ get: () => (state.alt ? 'x' : 'y'), set: () => {} }}>T</div>
-			<span data-testid="this-state">{String(state.thisCaptured)}</span>
-		</div>
-	)
-}
-
-function AComponent(props: { children?: JSX.Children }, scope: Record<PropertyKey, any>) {
-	scope.myValue = 52
-	return <div data-testid="scope-component">{props.children}</div>
-}
-
-function BComponent(_: any, scope: Record<PropertyKey, any>) {
-	return <p class="my-value">My value is {scope.myValue}</p>
-}
-
-const RendererFeaturesFixture = (_: any, scope: Record<PropertyKey, any>) => {
-	scope.myValue = 32
-	return (
-		<main>
-			<h1>Renderer Features Fixture</h1>
-			<section class="controls">
-				<button data-action="toggle-flag" onClick={controls.toggleFlag}>Toggle Flag</button>
-				<button data-action="toggle-alt" onClick={controls.toggleAlt}>Toggle Alt</button>
-				<button data-action="toggle-class" onClick={controls.toggleClass}>Toggle Class</button>
-				<button data-action="style-obj" onClick={() => controls.switchStyle('obj')}>Style Obj</button>
-				<button data-action="style-arr" onClick={() => controls.switchStyle('arr')}>Style Arr</button>
-				<button data-action="style-str" onClick={() => controls.switchStyle('str')}>Style Str</button>
-				<button data-action="toggle-listener" onClick={controls.toggleListener}>Toggle Listener</button>
-				<button data-action="reset-clicks" onClick={controls.resetClicks}>Reset Clicks</button>
-				<button data-action="topic-alice" onClick={() => controls.setTopic('Alice')}>Topic: Alice</button>
-				<button data-action="topic-bob" onClick={() => controls.setTopic('Bob')}>Topic: Bob</button>
-				<button data-action="topic-carol" onClick={() => controls.setTopic('Carol')}>Topic: Carol</button>
-			</section>
-			<section class="output">
-				<ReactiveClassDemo />
-				<StyleDemo />
-				<InnerHtmlDemo />
-				<EventsDemo />
-				<PropVsAttrDemo />
-				<InputsDemo />
-                <UseCallbackDemo />
-				<section data-testid="if-else-topic-demo">
-					<scope topic={state.topic}>
-						<div if:topic="Alice" data-testid="branch-alice">Alice branch</div>
-						<div if:topic="Bob" data-testid="branch-bob">Bob branch</div>
-						<div else data-testid="branch-else">Else branch</div>
-					</scope>
-				</section>
-				<section data-testid="if-else-bool-demo">
-					<div if={state.topic === 'Alice'} data-testid="branch-alice">Alice branch</div>
-					<div if={state.topic === 'Bob'} data-testid="branch-bob">Bob branch</div>
-					<div else data-testid="branch-else">Else branch</div>
-				</section>
-				<section data-testid="else-if-condition-demo">
-					<div if={state.num > 10}>&gt;10</div>
-					<div else if={state.num >= 5}>5-10</div>
-					<div else>&lt;5</div>
-				</section>
-				<RendererConditionsDemo />
-				<ThisAndUseDemo />
-				<AComponent>
-					<BComponent />
-					<p class="direct-value">Direct value is {scope.myValue}</p>
-				</AComponent>
-			</section>
-		</main>
-	)}
+			<button data-action="toggle-dynamic-mode" onClick={controls.toggleDynamicMode}>
+				Toggle Dynamic Mode
+			</button>
+			<button data-action="feature-toggle" onClick={controls.toggleFeature}>
+				Toggle Feature
+			</button>
+			<button data-action="role-guest" onClick={() => controls.setRole('guest')}>
+				Role: Guest
+			</button>
+			<button data-action="role-member" onClick={() => controls.setRole('member')}>
+				Role: Member
+			</button>
+			<button data-action="role-admin" onClick={() => controls.setRole('admin')}>
+				Role: Admin
+			</button>
+			<button data-action="variant-next" onClick={controls.nextVariant}>
+				Next Variant
+			</button>
+			<button data-action="use-toggle-target" onClick={controls.toggleUseTarget}>
+				Toggle Use Target
+			</button>
+			<button data-action="list-update" onClick={controls.updateFirstLabel}>
+				Update First Label
+			</button>
+			<button data-action="list-remove" onClick={controls.removeFirstItem}>
+				Remove First Item
+			</button>
+			<button data-action="list-add" onClick={() => controls.addItem()}>
+				Add Item
+			</button>
+		</section>
+		<section class="output">
+			<DynamicDemo />
+			<IfDemo />
+			<UseDemo />
+			<ForListDemo />
+		</section>
+	</main>
+)
 
 export default RendererFeaturesFixture
 

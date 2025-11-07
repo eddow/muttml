@@ -1,4 +1,4 @@
-import { effect, memoize, reactive } from 'mutts/src'
+import { effect, lazy, memoize, reactive } from 'mutts/src'
 
 type AllOptional<T> = {
 	[K in keyof T as undefined extends T[K] ? K : never]-?: T[K]
@@ -17,7 +17,7 @@ export function defaulted<T, D extends Partial<AllOptional<T>>>(
 	base: T,
 	defaults: D
 ): Defaulted<T, D> {
-	return Object.setPrototypeOf(base, defaults)
+	return lazy(Object.setPrototypeOf(base, defaults))
 }
 
 type PropsDesc<P extends Record<string, any>> = {

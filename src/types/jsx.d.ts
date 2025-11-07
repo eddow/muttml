@@ -3,7 +3,10 @@ import type { StyleInput } from '@/lib/styles'
 declare global {
 	const h: (type: any, props?: any, ...children: any[]) => JSX.Element
 	const Fragment: (props: { children: any }) => any
-	type ComponentFunction = (props: any, scope: Record<PropertyKey, any>) => JSX.Element
+	type ComponentFunction = (
+		props: any,
+		scope: Record<PropertyKey, any>
+	) => JSX.Element | null | undefined
 	namespace JSX {
 		// biome-ignore lint/suspicious/noConfusingVoidType: Void ends up automatically
 		type Child = Node | string | number | JSX.Element | void | false

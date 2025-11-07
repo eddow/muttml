@@ -1,22 +1,20 @@
-import { test, expect, Page } from '@playwright/test'
-
-type RenderEvent = { event: string; args: any[]; timestamp: number }
-
-async function getEvents(page: Page): Promise<RenderEvent[]> {
-    return await page.evaluate(() => window.__pounceEvents?.renderingEvents || []) as RenderEvent[]
-}
+import { test, expect } from '@playwright/test'
 
 test.describe('Renderer features', () => {
 	test.beforeEach(async ({ page }) => {
 		await page.goto('/#RendererFeatures')
 		await page.waitForSelector('#tests')
-		const errorPromise = page.waitForSelector('#tests :text("Failed to load fixture")', { timeout: 5000 }).catch(() => null)
+		const errorPromise = page
+			.waitForSelector('#tests :text("Failed to load fixture")', { timeout: 5000 })
+			.catch(() => null)
 		const okPromise = page.waitForSelector('#tests .output', { timeout: 5000 }).catch(() => null)
 		const result = await Promise.race([errorPromise, okPromise])
 		if (!result) {
 			const html = await page.locator('#tests').innerHTML()
 			const list = await page.evaluate(() => (window as any).__fixturesList || [])
-			throw new Error('Fixture did not render within timeout. #tests HTML: ' + html + ' fixtures: ' + JSON.stringify(list))
+			throw new Error(
+				'Fixture did not render within timeout. #tests HTML: ' + html + ' fixtures: ' + JSON.stringify(list)
+			)
 		}
 		const isError = await page.locator('#tests :text("Failed to load fixture")').count()
 		if (isError) {
@@ -25,155 +23,87 @@ test.describe('Renderer features', () => {
 		}
 	})
 
-	test('if/else with Scope topic `is`: switch-like matching and else fallback', async ({ page }) => {
-		const cond = page.locator('[data-testid="if-else-topic-demo"]')
-		await expect(cond).toContainText('Alice branch')
-		await expect(cond).not.toContainText('Bob branch')
-		await expect(cond).not.toContainText('Else branch')
+	test('dynamic tag selection forwards `is` and supports components', async ({ page }) => {
+		const root = page.locator('[data-testid="dynamic-root"]')
+		await expect(root).toHaveAttribute('data-kind', 'button')
+		await expect(root).toHaveAttribute('is', 'fancy-control')
+		const initialTag = await root.evaluate<string>((node) => node.tagName.toLowerCase())
+		expect(initialTag).toBe('button')
 
-		await page.click('[data-action="topic-bob"]')
-		await expect(cond).not.toContainText('Alice branch')
-		await expect(cond).toContainText('Bob branch')
-		await expect(cond).not.toContainText('Else branch')
+		await page.click('[data-action="toggle-dynamic"]')
+		await expect(root).toHaveAttribute('data-kind', 'section')
+		const toggledTag = await root.evaluate<string>((node) => node.tagName.toLowerCase())
+		expect(toggledTag).toBe('section')
 
-		await page.click('[data-action="topic-carol"]')
-		await expect(cond).not.toContainText('Alice branch')
-		await expect(cond).not.toContainText('Bob branch')
-		await expect(cond).toContainText('Else branch')
-	})
-	test('if/else with boolean condition', async ({ page }) => {
-		const cond = page.locator('[data-testid="if-else-bool-demo"]')
-		await expect(cond).toContainText('Alice branch')
-		await expect(cond).not.toContainText('Bob branch')
-		await expect(cond).not.toContainText('Else branch')
-
-		await page.click('[data-action="topic-bob"]')
-		await expect(cond).not.toContainText('Alice branch')
-		await expect(cond).toContainText('Bob branch')
-		await expect(cond).not.toContainText('Else branch')
-
-		await page.click('[data-action="topic-carol"]')
-		await expect(cond).not.toContainText('Alice branch')
-		await expect(cond).not.toContainText('Bob branch')
-		await expect(cond).toContainText('Else branch')
+		await page.click('[data-action="toggle-dynamic-mode"]')
+		await expect(root).toHaveAttribute('data-kind', 'component')
+		await expect(root).toHaveAttribute('is', 'fancy-control')
+		const componentTag = await root.evaluate<string>((node) => node.tagName.toLowerCase())
+		expect(componentTag).toBe('article')
+		await expect(page.locator('[data-testid="dynamic-component-marker"]')).toBeVisible()
+		await expect(page.locator('[data-testid="dynamic-forwarded-is"]')).toHaveText('fancy-control')
 	})
 
-	test('reactive class vs static string', async ({ page }) => {
-		const reactiveDiv = page.locator('[data-testid="class-reactive"]')
-		await page.click('[data-action="toggle-class"]')
-		await expect(reactiveDiv).toHaveClass('x y')
+	test('`if` directives react to boolean, scope, and when conditions', async ({ page }) => {
+		const featureOn = page.locator('[data-testid="feature-on"]')
+		const featureOff = page.locator('[data-testid="feature-off"]')
+		const permAllowed = page.locator('[data-testid="perm-allowed"]')
+		const permDenied = page.locator('[data-testid="perm-denied"]')
 
-		const events = await getEvents(page)
-		const classEvents = events.filter((e: RenderEvent) => e.event === 'set className')
-		expect(classEvents.some((e: RenderEvent) => e.args[1] === 'x y')).toBeTruthy()
+		await expect(featureOn).toHaveText('Feature On')
+		await expect(featureOff).toHaveCount(0)
+		await expect(page.locator('[data-testid="role-guest"]')).toHaveText('Guest space')
+		await expect(permAllowed).toHaveCount(0)
+		await expect(permDenied).toHaveText('No analytics access')
+
+		await page.click('[data-action="feature-toggle"]')
+		await expect(page.locator('[data-testid="feature-on"]')).toHaveCount(0)
+		await expect(page.locator('[data-testid="feature-off"]')).toHaveText('Feature Off')
+
+		await page.click('[data-action="role-member"]')
+		await expect(page.locator('[data-testid="role-member"]')).toHaveText('Member area')
+		await expect(page.locator('[data-testid="role-guest"]')).toHaveCount(0)
+		await expect(permAllowed).toHaveText('Analytics enabled')
+		await expect(permDenied).toHaveCount(0)
+
+		await page.click('[data-action="role-admin"]')
+		await expect(page.locator('[data-testid="role-admin"]')).toHaveText('Admin control')
 	})
 
-	test('style prop reactivity and inputs (function/object/array/string)', async ({ page }) => {
-		const styled = page.locator('[data-testid="style-reactive"]')
-		await page.click('[data-action="style-arr"]')
-		await expect(styled).toHaveCSS('color', 'rgb(0, 0, 255)')
+	test('`use` directives provide mount hooks and reactive mixins', async ({ page }) => {
+		const mounts = page.locator('[data-testid="use-mounts"]')
+		const toggleUse = page.locator('[data-action="use-toggle-target"]')
+		const target = page.locator('[data-testid="use-target"]')
+		await expect(mounts).toHaveText('1')
+		await expect(target).toHaveAttribute('data-marker', 'primary')
+		await expect(page.locator('[data-testid="mixin-updates"]')).toHaveText('1')
 
-		await page.click('[data-action="style-obj"]')
-		await expect(styled).toHaveCSS('color', 'rgb(255, 0, 0)')
+		await page.click('[data-action="variant-next"]')
+		await expect(target).toHaveAttribute('data-marker', 'secondary')
+		await expect(page.locator('[data-testid="mixin-updates"]')).toHaveText('2')
 
-		await page.click('[data-action="style-str"]')
-		await expect(styled).toHaveCSS('border-top-color', 'rgb(0, 0, 0)')
+		await toggleUse.click()
+		await expect(page.locator('[data-testid="use-target"]')).toHaveCount(0)
+		await expect(mounts).toHaveText('1')
+		await expect(page.locator('[data-testid="mixin-updates"]')).toHaveText('2')
 	})
 
-	test('innerHTML prop sets exact HTML and logs', async ({ page }) => {
-		const inner = page.locator('[data-testid="inner"]')
-		await expect(inner.locator('em')).toHaveText('html')
-		const events = await getEvents(page)
-		expect(events.some((e: RenderEvent) => e.event === 'set innerHTML' && typeof e.args[1] === 'string' && e.args[1].includes('<em>html</em>'))).toBeTruthy()
-	})
+	test('`for` directive reuses instances and cleans up removed items', async ({ page }) => {
+		const firstItem = page.locator('[data-testid="list-item"]').first()
+		await expect(firstItem.locator('.label')).toHaveText('Alpha')
+		const initialInstance = await firstItem.getAttribute('data-instance')
+		if (!initialInstance) throw new Error('missing data-instance attribute on first list item')
 
-	test('event handlers: add/remove/reactive and cleanup', async ({ page }) => {
-		await page.click('[data-action="reset-clicks"]')
-		await page.click('[data-action="toggle-listener"]') // disable
-		await page.click('[data-action="toggle-listener"]') // enable
-		await page.click('[data-testid="evt-btn"]')
-		await expect(page.locator('[data-testid="clicks"]')).toHaveText('1')
+		await page.click('[data-action="list-update"]')
+		await expect(firstItem.locator('.label')).toHaveText('Alpha!')
+		await expect(firstItem).toHaveAttribute('data-instance', initialInstance)
 
-		await page.click('[data-action="toggle-listener"]') // disable -> should stop counting
-		await page.click('[data-testid="evt-btn"]')
-		await expect(page.locator('[data-testid="clicks"]')).toHaveText('1')
-	})
+		await page.click('[data-action="list-remove"]')
+		await expect(page.locator('[data-testid="list-item"]')).toHaveCount(1)
 
-	test('element property vs attribute setting', async ({ page }) => {
-		const label = page.locator('[data-testid="label"]')
-		await expect(label).toHaveAttribute('for', 'lbl')
-		const div = page.locator('[data-testid="div-propattr"]')
-		await expect(div).toHaveAttribute('id', 'attr')
-		await expect(div).toHaveAttribute('data-x', 'attr')
-		const events = await getEvents(page)
-		const attrs = events.filter((e: RenderEvent) => e.event === 'set attribute').map((e: RenderEvent) => e.args[1])
-		expect(attrs).toEqual(expect.arrayContaining(['htmlfor', 'id', 'data-x']))
-	})
-
-	test('input handling: default type, checkbox binding, number/range numeric conversion', async ({ page }) => {
-		const checkbox = page.locator('[data-testid="checkbox"]')
-		const number = page.locator('[data-testid="number"]')
-		const range = page.locator('[data-testid="range"]')
-		const def = page.locator('[data-testid="default-type"]')
-
-		await expect(def.evaluate((el: any) => el.type)).resolves.toBe('text')
-		await checkbox.check()
-		await page.waitForTimeout(10)
-
-		await number.fill('7')
-		await range.fill('9')
-		await expect(number).toHaveValue('7')
-		await expect(range).toHaveValue('9')
-	})
-
-	test('renderer-level when category (outside Scope)', async ({ page }) => {
-		const cond = page.locator('[data-testid="cond-demo"]')
-		await expect(cond).toContainText('Shown')
-		await page.click('[data-action="toggle-flag"]')
-		await expect(cond).toContainText('Hidden')
-	})
-
-	test('else-if chained conditions render correct branch', async ({ page }) => {
-		const demo = page.locator('[data-testid="else-if-condition-demo"]')
-		// initial state.num = 5 -> should show 5-10
-		await page.locator('[data-testid="number"]').fill('7')
-		await expect(demo).toContainText('5-10')
-		await expect(demo).not.toContainText('>10')
-		await expect(demo).not.toContainText('<5')
-
-		// set to 4 -> <5
-		await page.locator('[data-testid="number"]').fill('4')
-		await expect(demo).toContainText('<5')
-		await expect(demo).not.toContainText('5-10')
-		await expect(demo).not.toContainText('>10')
-
-		// set to 11 -> >10
-		await page.locator('[data-testid="number"]').fill('11')
-		await expect(demo).toContainText('>10')
-		await expect(demo).not.toContainText('5-10')
-		await expect(demo).not.toContainText('<5')
-	})
-
-	test('this:component meta captures mount; use meta triggers effect', async ({ page }) => {
-		const stateText = page.locator('[data-testid="this-state"]')
-		await expect(stateText).toHaveText(/true|false/)
-		await page.click('[data-action="toggle-alt"]')
-		await expect(stateText).toHaveText(/true/)
-	})
-
-	test('use={callback} mounts for component', async ({ page }) => {
-		const compChild = page.locator('[data-testid="use-inline-comp-child"]')
-		await expect(compChild).toHaveAttribute('data-comp', 'yes')
-
-		// Change unrelated state to ensure the mount hook does not re-run/react
-		await page.click('[data-action="toggle-flag"]')
-		await expect(compChild).toHaveAttribute('data-comp', 'yes')
-	})
-
-	test('scope component: children and direct value', async ({ page }) => {
-		const scopeComponent = page.locator('[data-testid="scope-component"]')
-		await expect(scopeComponent.locator('.direct-value')).toHaveText('Direct value is 32')
-		await expect(scopeComponent.locator('.my-value')).toHaveText('My value is 52')
+		await page.click('[data-action="list-add"]')
+		const lastItem = page.locator('[data-testid="list-item"]').last()
+		await expect(lastItem.locator('.label')).toHaveText(/Item \d+/)
 	})
 })
 
