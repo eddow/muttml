@@ -22,7 +22,7 @@ Every component receives two parameters:
 ```tsx
 function MyComponent(
   props: { title: string; count: number },
-  scope: Record<PropertyKey, any>
+  scope: Scope
 ) {
   return (
     <div>
@@ -73,7 +73,7 @@ function Button(props: {
 When the wrapper tag needs to change at runtime, use the `<dynamic>` helper component. Pass the tag name (or component) via the `is` prop and forward any additional attributes/children:
 
 ```tsx
-function Wrapper(props: { as?: keyof JSX.IntrinsicElements }) {
+function Wrapper(props: { as?: JSX.HTMLElementTag }) {
   return (
     <dynamic tag={props.as ?? 'div'} class="wrapper">
       {props.children}
@@ -284,7 +284,7 @@ Attach an inline mount callback without defining a mixin on `scope`.
 Example:
 
 ```tsx
-function Demo(props: {}, scope: Record<PropertyKey, any>) {
+function Demo(props: {}, scope: Scope) {
   return (
     <>
       {/* DOM element target */}
@@ -317,7 +317,7 @@ Notes:
 Example: resize mixin with ResizeObserver
 
 ```tsx
-function ResizeSandbox(_props: {}, scope: Record<PropertyKey, any>) {
+function ResizeSandbox(_props: {}, scope: Scope) {
   const size = reactive({ width: 0, height: 0 })
 
   scope.resize = (target: Node | Node[], value: any, _scope: Record<PropertyKey, any>) => {

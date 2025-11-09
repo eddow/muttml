@@ -1,4 +1,5 @@
 import { reactive, effect } from 'mutts/src'
+import { Scope } from '../../src'
 
 type Role = 'guest' | 'member' | 'admin'
 
@@ -65,24 +66,8 @@ window.__rendererControls = controls
 
 let nextListInstance = 1
 
-function FancyPanel(props: Record<string, any>) {
-	const { children, class: className, is, ...rest } = props
-	return (
-		<article
-			{...rest}
-			class={['fancy-panel', className].filter(Boolean).join(' ')}
-			is={is}
-			data-forwarded-is={is}
-		>
-			<span data-testid="dynamic-component-marker">component</span>
-			<span data-testid="dynamic-forwarded-is">{String(is)}</span>
-			{children}
-		</article>
-	)
-}
-
 function DynamicDemo() {
-	const tag = state.dynamicAsComponent ? FancyPanel : state.dynamicTag
+	const tag = state.dynamicTag
 	const kind = state.dynamicAsComponent ? 'component' : state.dynamicTag
 	return (
 		<section data-testid="dynamic-demo">
@@ -101,7 +86,7 @@ function DynamicDemo() {
 	)
 }
 
-function IfDemo(_: any, scope: Record<PropertyKey, any>) {
+function IfDemo(_: any, scope: Scope) {
 	effect(() => {
 		scope.currentRole = state.role
 	})
@@ -143,7 +128,7 @@ function IfDemo(_: any, scope: Record<PropertyKey, any>) {
 	)
 }
 
-function UseDemo(_: any, scope: Record<PropertyKey, any>) {
+function UseDemo(_: any, scope: Scope) {
 	scope.marker = (target: Node | Node[], value: string) => {
 		const node = Array.isArray(target) ? target[0] : target
 		if (!(node instanceof HTMLElement)) return
@@ -157,18 +142,19 @@ function UseDemo(_: any, scope: Record<PropertyKey, any>) {
 	}
 	return (
 		<section data-testid="use-demo">
-			{state.showUseTarget && (
-				<div
-					data-testid="use-target"
-					use={(target: HTMLElement) => {
+			<div if={state.showUseTarget}
+				data-testid="use-target"
+				use={(target: HTMLElement) => {
+					if (target.dataset.mounted !== 'yes') {
+						target.dataset.mounted = 'yes'
 						state.useMounts++
-						target.dataset.mountCount = String(state.useMounts)
-					}}
-					use:marker={state.variant}
-				>
-					<span data-testid="use-marker-text">{state.variant}</span>
-				</div>
-			)}
+					}
+					target.dataset.mountCount = String(state.useMounts)
+				}}
+				use:marker={state.variant}
+			>
+				<span data-testid="use-marker-text">{state.variant}</span>
+			</div>
 			<p data-testid="use-mounts">{state.useMounts}</p>
 			<p data-testid="mixin-updates">{state.mixinUpdates}</p>
 		</section>
@@ -183,7 +169,7 @@ function ListItem({ item }: { item: { id: number; label: string } }) {
 	)
 }
 
-function ForListDemo(_: any, scope: Record<PropertyKey, any>) {
+function ForListDemo(_: any, scope: Scope) {
 	scope.trackListItem = (target: Node | Node[], value: { id: number; label: string }) => {
 		const node = Array.isArray(target) ? target[0] : target
 		if (!(node instanceof HTMLElement)) return

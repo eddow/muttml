@@ -42,7 +42,7 @@ Strict-compare a value against `scope.name`:
 Use `when:` to call a function exposed on `scope` and render if it returns a truthy value:
 
 ```tsx
-function Area(props: {}, scope: Record<PropertyKey, any>) {
+function Area(props: {}, scope: Scope) {
   scope.has = (perm: string) => scope.user?.permissions?.includes(perm)
   return (
     <>
@@ -98,11 +98,11 @@ function App() {
   )
 }
 
-function UserInfo(props: any, scope: Record<PropertyKey, any>) {
+function UserInfo(props: any, scope: Scope) {
   return <p>User: {scope.user}</p>
 }
 
-function AdminPanel(props: any, scope: Record<PropertyKey, any>) {
+function AdminPanel(props: any, scope: Scope) {
   return (
     <div if:role={'admin'}>
       <p>Admin Panel (visible to {scope.user})</p>
@@ -120,7 +120,7 @@ function ComponentC() {
   return <ComponentA><ComponentB /></ComponentA>
 }
 
-function ComponentA(props: any, scope: Record<PropertyKey, any>) {
+function ComponentA(props: any, scope: Scope) {
   // Modify scope
   scope.theme = 'dark'
   
@@ -128,7 +128,7 @@ function ComponentA(props: any, scope: Record<PropertyKey, any>) {
   return <div>{props.children}</div>
 }
 
-function ComponentB(props: any, scope: Record<PropertyKey, any>) {
+function ComponentB(props: any, scope: Scope) {
   // This component receives scope from A, even though it was written in C
   return <div class={scope.theme}>Using dark theme</div>
 }
@@ -150,7 +150,7 @@ function App() {
   )
 }
 
-function Header(props: any, scope: Record<PropertyKey, any>) {
+function Header(props: any, scope: Scope) {
   return (
     <div>
       <div if={scope.isLoggedIn}>Welcome!</div>
@@ -159,7 +159,7 @@ function Header(props: any, scope: Record<PropertyKey, any>) {
   )
 }
 
-function MainContent(props: any, scope: Record<PropertyKey, any>) {
+function MainContent(props: any, scope: Scope) {
   return (
     <>
       <div if:role={'admin'}>Admin Dashboard</div>

@@ -1,10 +1,10 @@
 /**
  * Main entry point for Pounce-TS application
  */
-import { effect, mapped, reactive, trackEffect } from 'mutts/src'
-import { bindApp, defaulted } from './lib'
+import { effect, isFunction, mapped, reactive, trackEffect } from 'mutts/src'
+import { bindApp, compose, Scope } from './lib'
 
-function ResizeSandbox(_props: {}, scope: Record<PropertyKey, any>) {
+function ResizeSandbox(_props: {}, scope: Scope) {
 	const size = reactive({ width: 0, height: 0 })
 
 	// Define mixin on scope: resize(target, value, scope)
@@ -15,7 +15,7 @@ function ResizeSandbox(_props: {}, scope: Record<PropertyKey, any>) {
 			const rect = entries[0].contentRect
 			const width = Math.round(rect.width)
 			const height = Math.round(rect.height)
-			if (typeof value === 'function') value(width, height)
+			if (isFunction(value)) value(width, height)
 			else {
 				value.width = width
 				value.height = height
@@ -43,12 +43,12 @@ function ResizeSandbox(_props: {}, scope: Record<PropertyKey, any>) {
 
 function MiniCounter(
 	props: { list?: string[]; addedText?: string },
-	scope: Record<PropertyKey, any>
+	scope: Scope
 ) {
 	trackEffect((obj, evolution) => {
 		console.log(obj, evolution)
 	})
-	const state = defaulted(props, { list: [] as string[], addedText: Date.now().toString() })
+	const state = compose(props, { list: [] as string[], addedText: Date.now().toString() })
 	console.log('🎯 Mini counter component mounted!', { scope: scope })
 	effect(() => {
 		return () => {

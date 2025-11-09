@@ -1,15 +1,12 @@
-import type { StyleInput } from '@/lib/styles'
+import type { StyleInput } from '../lib/styles'
 
 declare global {
 	const h: (type: any, props?: any, ...children: any[]) => JSX.Element
 	const Fragment: (props: { children: any }) => any
-	type ComponentFunction = (
-		props: any,
-		scope: Record<PropertyKey, any>
-	) => JSX.Element | null | undefined
+	type ComponentFunction = (props: any, scope: Scope) => JSX.Element | null | undefined
 	namespace JSX {
 		// biome-ignore lint/suspicious/noConfusingVoidType: Void ends up automatically
-		type Child = Node | string | number | JSX.Element | void | false
+		type Child = Node | string | number | JSX.Element | void | false | null | undefined
 		type Children = Child | readonly Child[]
 		// Specify the property name used for JSX children
 		interface ElementChildrenAttribute {
@@ -37,7 +34,7 @@ declare global {
 					children?: any
 					// Meta: capture component reference on render
 					this?: N
-					if?: boolean
+					if?: any
 					use?: (target: N) => void
 					else?: true
 					when?: any
@@ -228,7 +225,7 @@ declare global {
 		interface IntrinsicElements extends HTMLTagElementsMap {
 			[elementName: string]: BaseHTMLAttributes<HTMLElement>
 			dynamic: BaseHTMLAttributes<HTMLElement> & {
-				tag: ElementType | string
+				tag: HTMLElementTag
 				children?: Children
 				[key: string]: any
 			}
@@ -590,5 +587,6 @@ declare global {
 			// Common HTML attributes for all elements
 			[elemName: string]: BaseHTMLAttributes
 		}
+		type HTMLElementTag = keyof HTMLElementTagNameMap
 	}
 }

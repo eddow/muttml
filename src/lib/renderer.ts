@@ -2,16 +2,20 @@ import {
 	atomic,
 	biDi,
 	effect,
+	isFunction,
 	isNonReactive,
+	isNumber,
+	isObject,
+	isString,
+	isSymbol,
 	mapped,
 	memoize,
 	reactive,
 	reduced,
 	unwrap,
 } from 'mutts/src'
-import { classNames } from './classNames'
 import { namedEffect, testing } from './debug'
-import { styles } from './styles'
+import { ClassInput, classNames, StyleInput, styles } from './styles'
 import { extend, isElement, propsInto } from './utils'
 
 export type Scope = Record<PropertyKey, any>
@@ -33,9 +37,13 @@ function listen(
 
 function valuedAttributeGetter(to: any) {
 	if (to === true) return () => undefined
-	if (typeof to === 'function') return memoize(to)
-	if (typeof to === 'object' && 'get' in to) return memoize(to.get)
+	if (isFunction(to)) return memoize(to as (...args: any[]) => unknown)
+	if (isObject(to) && 'get' in to) return memoize((to as { get: () => unknown }).get)
 	return () => to
+}
+
+function forward(tag: string, children: readonly JSX.Element[], scope: Scope) {
+	return { tag, render: () => processChildren(children, scope) }
 }
 
 /**
@@ -53,8 +61,7 @@ export const h = (
 		switch (key) {
 			case 'this': {
 				const setComponent = value?.set
-				if (typeof setComponent !== 'function')
-					throw new Error('`this` attribute must be an L-value')
+				if (!isFunction(setComponent)) throw new Error('`this` attribute must be an L-value')
 				collectedCategories.mount = [
 					(v: any) => {
 						setComponent(v)
@@ -98,12 +105,13 @@ export const h = (
 		}
 	}
 	let mountObject: any
-	const componentCtor = typeof tag === 'string' ? intrinsicComponentAliases[tag] : tag
+	const componentCtor = isString(tag) ? intrinsicComponentAliases[tag] : tag
 	// If we were given a component function directly, render it
 	if (componentCtor) {
 		// Effect for styles - only updates style container
 		mountObject = {
-			render(scope: Record<PropertyKey, any> = rootScope) {
+			tag,
+			render(scope: Scope = rootScope) {
 				testing.renderingEvent?.('render component', componentCtor.name)
 				const givenProps = reactive(propsInto(regularProps, { children }))
 				// Set scope on the component instance
@@ -117,8 +125,7 @@ export const h = (
 		testing.renderingEvent?.('create element', tag, element)
 		if (tag === 'input') {
 			props.type ??= 'text'
-			if (typeof props.type !== 'string')
-				console.warn('input type must be a constant string', props.type)
+			if (!isString(props.type)) console.warn('input type must be a constant string', props.type)
 		}
 		function setHtmlProperty(key: string, value: any) {
 			const normalizedKey = key.toLowerCase()
@@ -152,33 +159,26 @@ export const h = (
 					return listen(element, eventType, registeredEvent)
 				})
 			} else if (key === 'class') {
-				if (typeof value === 'function') {
-					// Reactive class (e.g., `class={() => ['btn', { active: this.isActive }]}`)
-					effect(function className() {
-						const nextClassName = classNames(value())
-						testing.renderingEvent?.('set className', element, nextClassName)
-						element.className = nextClassName
-					})
-				} else {
-					// Static class
-					const nextClassName = classNames(value)
+				const getter = valuedAttributeGetter(value)
+				effect(function className() {
+					const nextClassName = classNames(getter() as ClassInput)
 					testing.renderingEvent?.('set className', element, nextClassName)
 					element.className = nextClassName
-				}
+				})
 			} else if (key === 'style') {
 				// Inline styles via styles() helper; supports objects, arrays, strings, and reactive functions
-				if (typeof value === 'function') {
-					effect(function styleEffect() {
-						const computedStyles = styles(value())
-						applyStyleProperties(computedStyles)
-					})
-				} else {
-					const computedStyles = styles(value as any)
+				const getter = valuedAttributeGetter(value)
+				effect(function styleEffect() {
+					const computedStyles = styles(getter() as StyleInput)
 					applyStyleProperties(computedStyles)
-				}
-			} else if (typeof value === 'object' && value !== null && 'get' in value && 'set' in value) {
+				})
+			} else if (isObject(value) && value !== null && 'get' in value && 'set' in value) {
 				// 2-way binding for regular elements (e.g., `value={{get: () => this.value, set: val => this.value = val}}`)
-				const provide = biDi((v) => setHtmlProperty(key, v), value)
+				const binding = value as {
+					get: () => unknown
+					set: (v: unknown) => void
+				}
+				const provide = biDi((v) => setHtmlProperty(key, v), binding)
 				if (tag === 'input') {
 					switch (element.type) {
 						case 'checkbox':
@@ -193,7 +193,7 @@ export const h = (
 							break
 					}
 				}
-			} else if (typeof value === 'function') {
+			} else if (isFunction(value)) {
 				// Reactive prop (e.g., `prop={() => this.counter}`)
 				namedEffect(`prop:${key}`, () => {
 					setHtmlProperty(key, value())
@@ -212,7 +212,8 @@ export const h = (
 
 		// Create plain HTML element - also return mount object for consistency
 		mountObject = {
-			render(scope: Record<PropertyKey, any> = rootScope) {
+			tag,
+			render(scope: Scope = rootScope) {
 				// Render children
 				if (children && children.length > 0 && !regularProps?.innerHTML) {
 					// Process new children
@@ -228,7 +229,7 @@ export const h = (
 }
 
 const intrinsicComponentAliases = extend(null, {
-	scope(props: { children?: any; [key: string]: any }, scope: Record<PropertyKey, any>) {
+	scope(props: { children?: any; [key: string]: any }, scope: Scope) {
 		effect(function scopeEffect() {
 			for (const [key, value] of Object.entries(props)) if (key !== 'children') scope[key] = value
 		})
@@ -252,7 +253,7 @@ const intrinsicComponentAliases = extend(null, {
 			each: readonly T[]
 			children: (item: T, oldItem?: JSX.Element) => JSX.Element
 		},
-		scope: Record<PropertyKey, any>
+		scope: Scope
 	) {
 		const body = Array.isArray(props.children) ? props.children[0] : props.children
 		const cb = body() as (item: T, oldItem?: JSX.Element) => JSX.Element
@@ -260,17 +261,15 @@ const intrinsicComponentAliases = extend(null, {
 		const array = isNonReactive(props.each)
 			? props.each.map((item) => cb(item))
 			: mapped(props.each, (item, index, output: readonly JSX.Element[]) =>
-					['object', 'symbol', 'function'].includes(typeof item)
+					isObject(item) || isSymbol(item) || isFunction(item)
 						? memoized(item as T & object)
 						: cb(item, output[index])
 				)
-		return { render: () => processChildren(array, scope) }
+		return forward('for', array, scope)
 	},
 })
-export const Fragment = (props: { children: JSX.Element[] }, scope: Record<PropertyKey, any>) => ({
-	render: () => processChildren(props.children, scope),
-})
-
+export const Fragment = (props: { children: JSX.Element[] }, scope: Scope) =>
+	forward('fragment', props.children, scope)
 export function bindChildren(parent: Node, newChildren: Node | readonly Node[] | undefined) {
 	return effect(function redraw() {
 		let added = 0
@@ -337,13 +336,13 @@ export type Child = NodeDesc | (() => Intermediates) | JSX.Element | Child[]
  */
 export type Intermediates = NodeDesc | NodeDesc[]
 
-const render = memoize((renderer: JSX.Element, scope: Record<PropertyKey, any>) => {
+const render = memoize((renderer: JSX.Element, scope: Scope) => {
 	const partial = renderer.render(scope)
 	if (renderer.mount) for (const mount of renderer.mount) effect(() => mount(partial))
 	if (renderer.use)
 		for (const [key, value] of Object.entries(renderer.use) as [string, any])
 			effect(() => {
-				if (typeof scope[key] !== 'function') throw new Error(`${key} in scope is not a function`)
+				if (!isFunction(scope[key])) throw new Error(`${key} in scope is not a function`)
 				return scope[key](partial, value, scope)
 			})
 	return partial
@@ -358,11 +357,10 @@ const render = memoize((renderer: JSX.Element, scope: Record<PropertyKey, any>) 
  *
  * Returns a flat array of DOM nodes suitable for replaceChildren()
  */
-export function processChildren(
-	children: readonly Child[],
-	scope: Record<PropertyKey, any>
-): readonly Node[] {
-	const renderers = mapped(children, (child) => (typeof child === 'function' ? child() : child))
+export function processChildren(children: readonly Child[], scope: Scope): readonly Node[] {
+	const renderers = mapped(children, (child) =>
+		isFunction(child) ? (child as () => Intermediates)() : child
+	)
 	const conditioned = reduced(renderers, (child, previous: { had?: true }) => {
 		if (
 			isElement(child) &&
@@ -383,10 +381,10 @@ export function processChildren(
 
 	const rendered = mapped(conditioned, (partial): Node | readonly Node[] | false | undefined => {
 		const nodes = isElement(partial) ? render(partial, scope) : partial
-		if (!nodes && typeof nodes !== 'number') return
+		if (!nodes && !isNumber(nodes)) return
 		if (Array.isArray(nodes)) return processChildren(nodes, scope)
 		else if (nodes instanceof Node) return unwrap(nodes)
-		else if (typeof nodes === 'string' || typeof nodes === 'number') {
+		else if (isString(nodes) || isNumber(nodes)) {
 			const textNodeValue = String(nodes)
 			testing.renderingEvent?.('create text node', textNodeValue)
 			return document.createTextNode(textNodeValue)

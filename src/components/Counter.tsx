@@ -4,7 +4,7 @@
 
 import { effect, trackEffect, watch } from 'mutts/src'
 import './Counter.scss'
-import { defaulted } from '../lib/utils'
+import { compose, Scope } from '../lib'
 
 export default function CounterWebComponent(
 	props: {
@@ -21,20 +21,23 @@ export default function CounterWebComponent(
 		showInput?: boolean
 		label?: string
 	},
-	scope: Record<PropertyKey, any>
+	scope: Scope
 ) {
 	trackEffect((obj, evolution) => {
 		console.log(obj, evolution)
 	})
-	const state = defaulted(props, {
-		maxValue: 100,
-		minValue: 0,
-		step: 1,
-		disabled: false,
-		showSlider: true,
-		showInput: true,
-		label: 'Counter Component (JSX)',
-	})
+	const state = compose(
+		{
+			maxValue: 100,
+			minValue: 0,
+			step: 1,
+			disabled: false,
+			showSlider: true,
+			showInput: true,
+			label: 'Counter Component (JSX)',
+		},
+		props
+	)
 
 	console.log('🎯 Counter component mounted!', {
 		scope,

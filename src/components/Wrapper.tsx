@@ -2,7 +2,7 @@
  * Wrapper Component to demonstrate children usage
  */
 
-import { defaulted } from '../lib'
+import { compose } from '../lib'
 import './Wrapper.scss'
 
 export default function WrapperComponent(props: {
@@ -12,15 +12,18 @@ export default function WrapperComponent(props: {
 	showChildren?: boolean
 	maxChildren?: number
 	children?: JSX.Element | JSX.Element[]
-	tag?: keyof JSX.IntrinsicElements
+	tag?: JSX.HTMLElementTag
 }) {
-	const state = defaulted(props, {
-		title: 'Wrapper Component',
-		description: 'This wrapper contains children:',
-		class: 'wrapper',
-		showChildren: true,
-		tag: 'div',
-	})
+	const state = compose(
+		{
+			title: 'Wrapper Component',
+			description: 'This wrapper contains children:',
+			class: 'wrapper',
+			showChildren: true,
+			tag: 'div',
+		},
+		props
+	)
 
 	const childrenArray = Array.isArray(state.children)
 		? state.children

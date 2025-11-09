@@ -143,7 +143,7 @@ Examples
 </scope>
 
 // when: calls scope method
-function App(_p: {}, scope: Record<PropertyKey, any>) {
+function App(_p: {}, scope: Scope) {
   scope.can = (perm: string) => scope.role === 'admin' && perm === 'edit'
   return (
     <>

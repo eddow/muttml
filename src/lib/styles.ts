@@ -1,3 +1,45 @@
+import { isObject, isString } from 'mutts/src'
+
+/**
+ * Utility for generating CSS class names
+ */
+export type ClassInput = string | ClassInput[] | Record<string, boolean>
+
+/**
+ * Generates a CSS class name string from various inputs
+ *
+ * @param input - Can be a string, array (including nested arrays), or object with boolean values
+ * @returns A space-separated string of class names
+ */
+export function classNames(input: ClassInput): string {
+	const classes: string[] = []
+
+	if (isString(input)) {
+		classes.push(input)
+	} else if (Array.isArray(input)) {
+		for (const item of input) {
+			// Recursively call classNames for nested arrays
+			const result = classNames(item)
+			if (result) {
+				classes.push(result)
+			}
+		}
+	} else if (isObject(input) && input !== null) {
+		for (const [className, shouldInclude] of Object.entries(input)) {
+			if (shouldInclude) {
+				classes.push(className)
+			}
+		}
+	}
+
+	return classes.join(' ')
+}
+
+/**
+ * Alternative function name for convenience
+ */
+export const cn = classNames
+
 /**
  * Utility for generating inline style objects
  */
@@ -6,7 +48,6 @@ export type StylePrimitive = string | number
 export type StyleValue = StylePrimitive | null | undefined | false
 export type StyleRecord = Record<string, StyleValue>
 export type StyleInput = StyleRecord | string | StyleInput[] | null | undefined | false
-
 function kebabToCamelCase(input: string): string {
 	// Fast path: no dash
 	if (!input.includes('-')) return input
@@ -50,13 +91,13 @@ export function styles<T extends Record<string, any> = Record<string, any>>(
 			for (const item of input) apply(item)
 			return
 		}
-		if (typeof input === 'string') {
+		if (isString(input)) {
 			const parsed = parseCssText(input)
 			for (const [k, v] of Object.entries(parsed))
 				if (v !== false && v != null) result[k] = v as StylePrimitive
 			return
 		}
-		if (typeof input === 'object') {
+		if (isObject(input)) {
 			for (const [k, v] of Object.entries(input))
 				if (v !== false && v != null) result[k] = v as StylePrimitive
 		}

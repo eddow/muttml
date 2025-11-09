@@ -4,6 +4,13 @@ import { babelPluginJsxReactive } from './src/babel-plugin-jsx-reactive'
 
 export default defineConfig({
 	root: '.',
+	server: {
+		headers: {
+			'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
+			Pragma: 'no-cache',
+			Expires: '0',
+		},
+	},
 	css: {
 		preprocessorOptions: {
 			scss: {
@@ -37,6 +44,9 @@ export default defineConfig({
 		} as Plugin,
 	],
 	esbuild: false,
+	optimizeDeps: {
+		force: true,
+	},
 	build: {
 		outDir: 'dist',
 		target: 'esnext',

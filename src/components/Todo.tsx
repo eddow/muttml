@@ -4,7 +4,8 @@
 
 import { effect, memoize, trackEffect } from 'mutts/src'
 import './Todo.scss'
-import { array, defaulted } from '../lib/utils'
+import { array, compose } from '../lib/utils'
+import { Scope } from '../lib'
 
 interface Todo {
 	id: number
@@ -24,18 +25,21 @@ export default function TodoWebComponent(
 		filter?: 'all' | 'active' | 'completed'
 		newTodoText?: string
 	},
-	scope: Record<PropertyKey, any>
+	scope: Scope
 ) {
 	trackEffect((obj, evolution) => {
 		console.log(obj, evolution)
 	})
-	const state = defaulted(props, {
-		placeholder: 'Add a new todo...',
-		showFilters: true,
-		showClearCompleted: true,
-		filter: 'all',
-		newTodoText: '',
-	})
+	const state = compose(
+		{
+			placeholder: 'Add a new todo...',
+			showFilters: true,
+			showClearCompleted: true,
+			filter: 'all',
+			newTodoText: '',
+		},
+		props
+	)
 
 	console.log('🎯 Todo component mounted!', { scope })
 	effect(() => {
