@@ -136,19 +136,9 @@ export const h = (
 			}
 			const stringValue = String(value)
 			testing.renderingEvent?.('set attribute', element, normalizedKey, stringValue)
-			try {
-				if (normalizedKey in element) {
-					element[normalizedKey] = stringValue
-					return
-				}
-				if (key in element) {
-					element[key] = stringValue
-					return
-				}
-			} catch {
-				// Fallback to attribute assignment below
-			}
-			element.setAttribute(normalizedKey, stringValue)
+			if (normalizedKey in element) element[normalizedKey] = stringValue
+			else if (key in element) element[key] = stringValue
+			else element.setAttribute(normalizedKey, stringValue)
 		}
 		function applyStyleProperties(computedStyles: Record<string, any>) {
 			element.removeAttribute('style')
