@@ -226,7 +226,7 @@ declare global {
 		interface IntrinsicElements extends HTMLTagElementsMap {
 			[elementName: string]: BaseHTMLAttributes<HTMLElement>
 			dynamic: BaseHTMLAttributes<HTMLElement> & {
-				tag: HTMLElementTag
+				tag: HTMLElementTag | ComponentFunction
 				children?: Children
 				[key: string]: any
 			}

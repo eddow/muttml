@@ -3,8 +3,34 @@ import { Scope } from '../../src'
 
 type Role = 'guest' | 'member' | 'admin'
 
+function FancyDynamicComponent(
+	props: {
+		class?: string
+		children?: JSX.Children
+		'data-testid'?: string
+		'data-kind'?: string
+		is?: string
+	},
+	_scope: Scope
+) {
+	const forwardedChildren = props.children as any
+	return (
+		<article
+			class={props.class}
+			data-testid={props['data-testid']}
+			data-kind={props['data-kind']}
+			is={props.is}
+		>
+			<div data-testid="dynamic-component-marker">Fancy component wrapper</div>
+			<p data-testid="dynamic-forwarded-is">{props.is}</p>
+			{forwardedChildren}
+		</article>
+	)
+}
+
 const state = reactive({
-	dynamicTag: 'button' as 'button' | 'section',
+	dynamicElementTag: 'button' as 'button' | 'section',
+	dynamicTag: 'button' as 'button' | 'section' | ComponentFunction,
 	dynamicAsComponent: false,
 	dynamicIs: 'fancy-control',
 	role: 'guest' as Role,
@@ -24,10 +50,12 @@ const VARIANTS = ['primary', 'secondary', 'danger'] as const
 
 const controls = {
 	toggleDynamicTag() {
-		state.dynamicTag = state.dynamicTag === 'button' ? 'section' : 'button'
+		state.dynamicElementTag = state.dynamicElementTag === 'button' ? 'section' : 'button'
+		if (!state.dynamicAsComponent) state.dynamicTag = state.dynamicElementTag
 	},
 	toggleDynamicMode() {
 		state.dynamicAsComponent = !state.dynamicAsComponent
+		state.dynamicTag = state.dynamicAsComponent ? FancyDynamicComponent : state.dynamicElementTag
 	},
 	toggleFeature() {
 		state.featureOn = !state.featureOn
@@ -67,8 +95,10 @@ window.__rendererControls = controls
 let nextListInstance = 1
 
 function DynamicDemo() {
-	const tag = state.dynamicTag
-	const kind = state.dynamicAsComponent ? 'component' : state.dynamicTag
+	let tag: keyof HTMLElementTagNameMap | ComponentFunction
+	if (state.dynamicAsComponent) tag = state.dynamicTag as ComponentFunction
+	else tag = state.dynamicElementTag
+	const kind = state.dynamicAsComponent ? 'component' : state.dynamicElementTag
 	return (
 		<section data-testid="dynamic-demo">
 			<dynamic

@@ -10,6 +10,7 @@ import {
 	isSymbol,
 	mapped,
 	memoize,
+	organized,
 	reactive,
 	reduced,
 	unwrap,
@@ -54,56 +55,82 @@ export const h = (
 	props: Record<string, any> = rootScope,
 	...children: Child[]
 ): JSX.Element => {
-	// Separate regular props from colon-grouped category props (e.g., "if:user")
-	const regularProps: Record<string, any> = {}
-	const collectedCategories: Record<PropertyKey, any> = {}
-	for (const [key, value] of Object.entries(props || {})) {
-		switch (key) {
-			case 'this': {
-				const setComponent = value?.set
-				if (!isFunction(setComponent)) throw new Error('`this` attribute must be an L-value')
-				collectedCategories.mount = [
-					(v: any) => {
+	const propsBuckets = organized(
+		props || {},
+		({ key, value }, target) => {
+			if (typeof key !== 'string') return
+			switch (key) {
+				case 'this': {
+					const setComponent = value?.set
+					if (!isFunction(setComponent)) throw new Error('`this` attribute must be an L-value')
+					const mountEntry = (v: any) => {
 						setComponent(v)
-					},
-					...(collectedCategories.mount || []),
-				]
-				break
-			}
-			case 'else':
-				if (value !== true) throw new Error('`else` attribute must not specify a value')
-				collectedCategories.else = true
-				break
-			case 'if':
-				//propsInto({collectedCategories}, { condition: value })
-				Object.defineProperty(collectedCategories, 'condition', {
-					get: valuedAttributeGetter(value),
-					enumerable: true,
-					configurable: true,
-				})
-				break
-			case 'use':
-				collectedCategories.mount = [
-					valuedAttributeGetter(value)(),
-					...(collectedCategories.mount || []),
-				]
-				break
-			default: {
-				const match = key.match(/^([^:]+):(.+)$/)
-				if (match) {
-					const [, category, name] = match
-					collectedCategories[category] ??= {}
-					Object.defineProperty(collectedCategories[category], name, {
+					}
+					target.meta.mount = [mountEntry, ...(target.meta.mount || [])]
+					return () => {
+						const mounts = target.meta.mount || []
+						target.meta.mount = mounts.filter((fn: any) => fn !== mountEntry)
+						if (!target.meta.mount.length) delete target.meta.mount
+					}
+				}
+				case 'else': {
+					if (value !== true) throw new Error('`else` attribute must not specify a value')
+					target.meta.else = true
+					return () => {
+						delete target.meta.else
+					}
+				}
+				case 'if': {
+					const descriptor = {
 						get: valuedAttributeGetter(value),
 						enumerable: true,
 						configurable: true,
-					})
-				} else {
-					regularProps[key] = value
+					}
+					Object.defineProperty(target.meta, 'condition', descriptor)
+					return () => {
+						delete target.meta.condition
+					}
+				}
+				case 'use': {
+					const mountEntry = valuedAttributeGetter(value)()
+					if (mountEntry !== undefined) {
+						target.meta.mount = [mountEntry, ...(target.meta.mount || [])]
+						return () => {
+							const mounts = target.meta.mount || []
+							target.meta.mount = mounts.filter((fn: any) => fn !== mountEntry)
+							if (!target.meta.mount.length) delete target.meta.mount
+						}
+					}
+					return
+				}
+				default: {
+					const match = key.match(/^([^:]+):(.+)$/)
+					if (match) {
+						const [, category, name] = match
+						target.meta[category] ??= {}
+						Object.defineProperty(target.meta[category], name, {
+							get: valuedAttributeGetter(value),
+							enumerable: true,
+							configurable: true,
+						})
+						return () => {
+							if (target.meta[category]) {
+								delete target.meta[category][name]
+								if (!Reflect.ownKeys(target.meta[category]).length) delete target.meta[category]
+							}
+						}
+					}
+					target.node[key] = value
+					return () => {
+						delete target.node[key]
+					}
 				}
 			}
-		}
-	}
+		},
+		{ meta: {} as Record<PropertyKey, any>, node: {} as Record<string, any> }
+	)
+	const collectedCategories = propsBuckets.meta
+	const regularProps = propsBuckets.node
 	let mountObject: any
 	const componentCtor = isString(tag) ? intrinsicComponentAliases[tag] : tag
 	// If we were given a component function directly, render it
@@ -136,44 +163,56 @@ export const h = (
 			}
 			const stringValue = String(value)
 			testing.renderingEvent?.('set attribute', element, normalizedKey, stringValue)
-			if (normalizedKey in element) element[normalizedKey] = stringValue
-			else if (key in element) element[key] = stringValue
-			else element.setAttribute(normalizedKey, stringValue)
+			try {
+				if (normalizedKey in element) {
+					element[normalizedKey] = stringValue
+					return
+				}
+				if (key in element) {
+					element[key] = stringValue
+					return
+				}
+			} catch {
+				// Fallback to attribute assignment below
+			}
+			element.setAttribute(normalizedKey, stringValue)
 		}
 		function applyStyleProperties(computedStyles: Record<string, any>) {
 			element.removeAttribute('style')
 			testing.renderingEvent?.('assign style', element, computedStyles)
 			Object.assign(element.style, computedStyles)
 		}
-		// Set properties
-		for (const [key, value] of Object.entries(regularProps || {})) {
-			if (key === 'children') continue // Skip children, we'll handle them separately
+		organized(regularProps, ({ key, value }) => {
+			if (key === 'children') return
+			const runCleanup: (() => void)[] = []
+
+			if (typeof key !== 'string') return
 
 			if (/^on[A-Z]/.test(key)) {
-				// Event handler
 				const eventType = key.slice(2).toLowerCase()
-				namedEffect(`event:${key}`, () => {
+				return namedEffect(`event:${key}`, () => {
 					const handlerCandidate = value.get ? value.get() : value()
 					if (handlerCandidate === undefined) return
 					const registeredEvent = atomic(handlerCandidate)
 					return listen(element, eventType, registeredEvent)
 				})
-			} else if (key === 'class') {
+			}
+			if (key === 'class') {
 				const getter = valuedAttributeGetter(value)
-				effect(function className() {
+				return effect(function className() {
 					const nextClassName = classNames(getter() as ClassInput)
 					testing.renderingEvent?.('set className', element, nextClassName)
 					element.className = nextClassName
 				})
-			} else if (key === 'style') {
-				// Inline styles via styles() helper; supports objects, arrays, strings, and reactive functions
+			}
+			if (key === 'style') {
 				const getter = valuedAttributeGetter(value)
-				effect(function styleEffect() {
+				return effect(function styleEffect() {
 					const computedStyles = styles(getter() as StyleInput)
 					applyStyleProperties(computedStyles)
 				})
-			} else if (isObject(value) && value !== null && 'get' in value && 'set' in value) {
-				// 2-way binding for regular elements (e.g., `value={{get: () => this.value, set: val => this.value = val}}`)
+			}
+			if (isObject(value) && value !== null && 'get' in value && 'set' in value) {
 				const binding = value as {
 					get: () => unknown
 					set: (v: unknown) => void
@@ -182,33 +221,45 @@ export const h = (
 				if (tag === 'input') {
 					switch (element.type) {
 						case 'checkbox':
-							if (key === 'checked') listen(element, 'input', () => provide(element.checked))
+							if (key === 'checked')
+								runCleanup.push(listen(element, 'input', () => provide(element.checked)))
 							break
 						case 'number':
 						case 'range':
-							if (key === 'value') listen(element, 'input', () => provide(Number(element.value)))
+							if (key === 'value')
+								runCleanup.push(listen(element, 'input', () => provide(Number(element.value))))
 							break
 						default:
-							if (key === 'value') listen(element, 'input', () => provide(element.value))
+							if (key === 'value')
+								runCleanup.push(listen(element, 'input', () => provide(element.value)))
 							break
 					}
 				}
-			} else if (isFunction(value)) {
-				// Reactive prop (e.g., `prop={() => this.counter}`)
-				namedEffect(`prop:${key}`, () => {
+				return () => {
+					setHtmlProperty(key, undefined)
+					for (const stop of runCleanup) stop()
+				}
+			}
+			if (isFunction(value)) {
+				return namedEffect(`prop:${key}`, () => {
 					setHtmlProperty(key, value())
 				})
-			} else if (key === 'innerHTML') {
+			}
+			if (key === 'innerHTML') {
 				if (value !== undefined) {
 					const htmlValue = String(value)
 					testing.renderingEvent?.('set innerHTML', element, htmlValue)
 					element.innerHTML = htmlValue
 				}
-			} else {
-				// Regular attribute
-				setHtmlProperty(key, value)
+				return () => {
+					element.innerHTML = ''
+				}
 			}
-		}
+			setHtmlProperty(key, value)
+			return () => {
+				setHtmlProperty(key, undefined)
+			}
+		})
 
 		// Create plain HTML element - also return mount object for consistency
 		mountObject = {
