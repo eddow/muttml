@@ -94,18 +94,6 @@ export const array = {
 export function isElement(value: any): value is JSX.Element {
 	return value && isObject(value) && 'render' in value
 }
-
-export function decompose<T extends Record<string, any>, U extends Record<string, any>>(
-	obj: T,
-	decomposition: (obj: T) => U
-) {
-	const result = reactive(Object.create(null))
-	effect(() => {
-		const decomposed = decomposition(obj)
-		copyObject(result, decomposed)
-	})
-	return result
-}
 // No way to have it recursive and working
 type ComposeArgument = Record<string, any> | ((from: any) => Record<string, any>)
 export function compose<A extends object>(a: A | (() => A)): A

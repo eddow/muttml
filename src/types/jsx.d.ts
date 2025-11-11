@@ -168,6 +168,7 @@ declare global {
 			GlobalHTMLAttributes &
 			MouseReactiveHTMLAttributes & {
 				children?: Children
+				autoFocus?: boolean
 				// Additional common non-mouse events
 				onFocus?: (event: FocusEvent) => void
 				onBlur?: (event: FocusEvent) => void
@@ -238,6 +239,12 @@ declare global {
 			input: BaseHTMLAttributes<HTMLInputElement> &
 				(InputNumber | InputString | InputBoolean) & {
 					name?: string
+					form?: string
+					formAction?: string
+					formEncType?: string
+					formMethod?: 'get' | 'post' | 'dialog'
+					formNoValidate?: boolean
+					formTarget?: string
 					placeholder?: string
 					disabled?: boolean
 					required?: boolean
@@ -248,6 +255,8 @@ declare global {
 					size?: number
 					multiple?: boolean
 					accept?: string
+					list?: string
+					capture?: boolean | 'user' | 'environment'
 					autoComplete?: string
 					autoCorrect?: 'on' | 'off'
 					autoCapitalize?: 'off' | 'none' | 'on' | 'sentences' | 'words' | 'characters'
@@ -255,6 +264,7 @@ declare global {
 					pattern?: string
 					maxLength?: number
 					minLength?: number
+					dirName?: string
 					// Events
 					onInput?: (event: Event) => void
 					onChange?: (event: Event) => void
@@ -270,10 +280,13 @@ declare global {
 				disabled?: boolean
 				required?: boolean
 				readOnly?: boolean
+				name?: string
+				form?: string
 				rows?: number
 				cols?: number
 				maxLength?: number
 				minLength?: number
+				dirName?: string
 				wrap?: 'soft' | 'hard' | 'off'
 				autoComplete?: string
 				autoCorrect?: 'on' | 'off'
@@ -290,6 +303,8 @@ declare global {
 				value?: any
 				disabled?: boolean
 				required?: boolean
+				name?: string
+				form?: string
 				multiple?: boolean
 				size?: number
 				autoComplete?: string
