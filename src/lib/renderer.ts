@@ -50,11 +50,7 @@ function forward(tag: string, children: readonly JSX.Element[], scope: Scope) {
 /**
  * Custom h() function for JSX rendering - returns a mount function
  */
-export const h = (
-	tag: any,
-	props: Record<string, any> = rootScope,
-	...children: Child[]
-): JSX.Element => {
+export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[]): JSX.Element => {
 	const propsBuckets = organized(
 		props || {},
 		({ key, value }, target) => {
@@ -105,7 +101,7 @@ export const h = (
 				}
 				default: {
 					const match = key.match(/^([^:]+):(.+)$/)
-					if (match) {
+					if (match && match.length === 3 && ['use', 'if', 'when'].includes(match[1])) {
 						const [, category, name] = match
 						target.meta[category] ??= {}
 						Object.defineProperty(target.meta[category], name, {

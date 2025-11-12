@@ -164,7 +164,7 @@ declare global {
 		}
 
 		// Base interface for common HTML attributes
-		type BaseHTMLAttributes<N extends Element = HTMLElement> = IntrinsicAttributes<N> &
+		type BaseHTMLAttributes<N extends Node = HTMLElement> = IntrinsicAttributes<N> &
 			GlobalHTMLAttributes &
 			MouseReactiveHTMLAttributes & {
 				children?: Children
