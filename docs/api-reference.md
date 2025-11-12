@@ -46,42 +46,24 @@ The JSX pragma function that creates JSX elements. Automatically transforms JSX 
 
 ## Utility Functions
 
-### `defaulted(value, defaults)`
+### `compose(...sources)`
 
-Changes the prototype of `value` in order to provides default values for undefined properties. This is the primary utility for handling optional props in components.
+Creates a new reactive object by layering multiple plain objects or factory functions. Each source can read from everything that came before it, which makes it useful for composing state with defaults, derived helpers, and caller-provided props in one place.
 
 **Parameters:**
-- `value` - The object to wrap
-- `defaults` - Object with default values
+- `sources` - One or more objects or functions. Functions receive the accumulated result so far and must return an object.
 
-**Returns:** Proxy with default values
+**Order matters:** values from later arguments override properties from earlier ones (similar to `Object.assign`). Put default values first and pass incoming props afterwards so that props can override defaults. Reversing the order would overwrite user-provided props with your defaults.
 
 **Example:**
 ```tsx
-const props = defaulted(inputProps, {
-  label: 'Click me',
-  disabled: false
-})
+const state = compose(
+  { list: [] as string[], addedText: Date.now().toString() }, // defaults
+  props
+)
 ```
 
-### `extend(base, additions?)`
-
-Creates a reactive object that inherits from `base` via the prototype chain, optionally layering additional properties. This is useful when you need to derive a child scope or share stateful helpers without copying values.
-
-**Parameters:**
-- `base` - The object to inherit from (commonly a scope)
-- `additions` - Optional object whose own properties are defined on the new instance
-
-**Returns:** Reactive object that prototypes `base` and exposes any `additions`
-
-**Example:**
-```ts
-const childScope = extend(parentScope, {
-  role: 'admin',
-  canEdit: () => parentScope.user?.role === 'admin'
-})
-```
-
+In the example above, `list` and `addedText` act as defaults whenever the caller omits them, while any values supplied in `props` take precedence instead of being replaced by the defaults.
 
 
 ## Array Utilities

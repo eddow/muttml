@@ -48,7 +48,7 @@ function MiniCounter(
 	trackEffect((obj, evolution) => {
 		console.log(obj, evolution)
 	})
-	const state = compose(props, { list: [] as string[], addedText: Date.now().toString() })
+	const state = compose({ list: [] as string[], addedText: Date.now().toString() }, props)
 	console.log('🎯 Mini counter component mounted!', { scope: scope })
 	effect(() => {
 		return () => {

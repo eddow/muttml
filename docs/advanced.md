@@ -297,6 +297,68 @@ function MyComponent() {
 
 ## Props Handling
 
+### Namespaced Props
+
+Pounce-TS automatically expands optional object props into _namespaced_ variants so you can target nested values directly in JSX attributes. This is handled by the custom `h()` runtime and the JSX types—no wrapper helpers required.
+
+- **Automatic restructuring:** Component props are reorganized so attributes like `config:title="..."` land on `props.config.title`.
+- **Optional only:** Namespaced attributes are generated when the original prop is optional _and_ the prop type accepts `undefined` and `{}`. Required props (e.g. `{ item: Item }`) do **not** receive namespaced keys.
+- **Colon syntax:** Use `${propName}:${nestedKey}`. The nested keys mirror the original object keys and stay optional, so you can provide just the bits you need.
+- **Intrinsic safety:** Namespaced attributes remain optional on components and never appear on intrinsic DOM elements unless you provide them yourself.
+- **Type-aware:** The JSX namespace exposes the derived types, so TypeScript catches unsupported namespaces at compile time.
+
+```tsx
+type PanelProps = {
+  // Optional object that tolerates an empty object and undefined
+  config?: {
+    title?: string
+    count?: number
+  }
+}
+
+function Panel(props: PanelProps) {
+  return (
+    <section>
+      <h3>{props.config?.title ?? 'Untitled'}</h3>
+      <p>{props.config?.count ?? 0} items</p>
+    </section>
+  )
+}
+
+// Namespaced usage: generates props.config.title/count automatically
+<Panel config:title="Dashboard" config:count={state.items.length} />
+
+// Optional keys stay optional – you can mix and match
+<Panel config:title="Draft" />
+```
+
+If you need compile-time assurance around what namespaces exist, the JSX typing surface makes them available:
+
+```tsx
+type PanelPropsWithNamespace = JSX.LibraryManagedAttributes<
+  typeof Panel,
+  PanelProps
+>
+
+type HasTitleNamespace = Extract<
+  keyof PanelPropsWithNamespace,
+  'config:title'
+> // "config:title"
+
+type CountType = PanelPropsWithNamespace['config:count'] // number | undefined
+```
+
+Because required props never gain colon variants, the following will fail to type-check (as intended):
+
+```tsx
+function ListItem(props: { item: { id: number; label: string } }) {
+  /* ... */
+}
+
+// ❌ Type error: 'item:label' is not generated for required props
+<ListItem item:label="Alpha" />
+```
+
 ### Props with Functions
 
 Props can be functions or get/set objects:

@@ -16,6 +16,7 @@ import {
 	unwrap,
 } from 'mutts/src'
 import { namedEffect, testing } from './debug'
+import { ensureNameSpaced } from './namespaced'
 import { ClassInput, classNames, StyleInput, styles } from './styles'
 import { extend, isElement, propsInto } from './utils'
 
@@ -128,7 +129,11 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 	const collectedCategories = propsBuckets.meta
 	const regularProps = propsBuckets.node
 	let mountObject: any
-	const componentCtor = isString(tag) ? intrinsicComponentAliases[tag] : tag
+	const resolvedTag = isString(tag) ? intrinsicComponentAliases[tag] : tag
+	const componentCtor =
+		!isString(tag) && typeof resolvedTag === 'function'
+			? ensureNameSpaced(resolvedTag)
+			: resolvedTag
 	// If we were given a component function directly, render it
 	if (componentCtor) {
 		// Effect for styles - only updates style container

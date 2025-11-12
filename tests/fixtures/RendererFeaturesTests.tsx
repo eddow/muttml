@@ -199,6 +199,15 @@ function ListItem({ item }: { item: { id: number; label: string } }) {
 	)
 }
 
+function NamespacedOptionalDemo(props: { config?: { heading?: string; count?: number } }) {
+	return (
+		<section data-testid="namespaced-optional">
+			<h3 data-testid="namespaced-heading">{props.config?.heading ?? 'No heading'}</h3>
+			<p data-testid="namespaced-count">{props.config?.count ?? 0}</p>
+		</section>
+	)
+}
+
 function ForListDemo(_: any, scope: Scope) {
 	scope.trackListItem = (target: Node | Node[], value: { id: number; label: string }) => {
 		const node = Array.isArray(target) ? target[0] : target
@@ -263,10 +272,32 @@ const RendererFeaturesFixture = () => (
 			<IfDemo />
 			<UseDemo />
 			<ForListDemo />
+			<NamespacedOptionalDemo
+				config:heading="Namespaced Optional Demo"
+				config:count={state.list.length}
+			/>
 		</section>
 	</main>
 )
 
 export default RendererFeaturesFixture
+
+type OptionalNamespacedProps = JSX.LibraryManagedAttributes<
+	typeof NamespacedOptionalDemo,
+	{ config?: { heading?: string; count?: number } }
+>
+type AssertTrue<T extends true> = T
+
+type RequiredNamespacedProps = JSX.LibraryManagedAttributes<
+	typeof ListItem,
+	{ item: { id: number; label: string } }
+>
+// biome-ignore lint/suspicious/noUnusedIdentifiers -- compile-time namespace type assertions
+type _NamespacedTypeAssertions = [
+	AssertTrue<Extract<keyof OptionalNamespacedProps, `config:${string}`> extends never ? false : true>,
+	OptionalNamespacedProps['config:count'],
+	AssertTrue<Extract<keyof RequiredNamespacedProps, `item:${string}`> extends never ? true : false>,
+]
+declare const _namespacedTypeAssertions: _NamespacedTypeAssertions
 
 

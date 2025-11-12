@@ -1,5 +1,6 @@
 import { ScopedCallback } from 'mutts/src'
 import { Scope } from 'src/lib'
+import type { NameSpacedProps } from '../lib/namespaced'
 import type { StyleInput } from '../lib/styles'
 
 declare global {
@@ -42,6 +43,19 @@ declare global {
 			template: any
 		}
 		type ElementType = string | ComponentFunction
+
+		type WithNameSpacedProps<Props> = Props extends Record<string, any>
+			? NameSpacedProps<Props>
+			: Props
+
+		type ExtractComponentProps<C, Props> = C extends { props: infer ExplicitProps }
+			? ExplicitProps
+			: C extends (props: infer InferredProps, ...args: any[]) => any
+				? InferredProps
+				: Props
+
+		type LibraryManagedAttributes<Component, Props> = ComponentIntrinsicAttributes<Component> &
+			(Props extends Record<string, any> ? NameSpacedProps<Props> : Props)
 
 		type RenderOutput<T> = T extends JSX.Element ? ReturnType<T['render']> : T
 
