@@ -17,6 +17,11 @@ const state = reactive({
 // biome-ignore lint/style/useConst: set in the props
 let todos = reactive([])
 // Build the app virtual tree and render to a DocumentFragment
+/*const refs = {
+	input: undefined as HTMLInputElement | undefined,
+	counter: undefined as Node | readonly Node[] | undefined,
+	todos: undefined as Node | readonly Node[] | undefined,
+}*/
 const refs: Record<string, Node | Node[]> = {}
 console.log('refs', refs)
 const App = () => (
@@ -60,7 +65,7 @@ const App = () => (
 				<p>This input is bound to the same state as the counter:</p>
 				<input
 					type="number"
-					this={refs.input}
+					this={refs.input as HTMLInputElement}
 					value={state.sharedCount}
 					style="padding: 8px; margin: 5px; border: 1px solid #ccc; border-radius: 4px;"
 				/>

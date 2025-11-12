@@ -1,6 +1,10 @@
 import { defineConfig, type Plugin } from 'vite'
 import { transformSync } from '@babel/core'
+import { dirname, resolve as resolvePath } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { babelPluginJsxReactive } from './src/babel-plugin-jsx-reactive'
+
+const projectRootDir = dirname(fileURLToPath(import.meta.url))
 
 export default defineConfig({
 	root: '.',
@@ -18,6 +22,13 @@ export default defineConfig({
 			}
 		}
 	},
+	resolve: {
+		alias: {
+			'@pounce/runtime/jsx-runtime': resolvePath(projectRootDir, 'src/runtime/jsx-runtime.ts'),
+			'@pounce/runtime/jsx-dev-runtime': resolvePath(projectRootDir, 'src/runtime/jsx-dev-runtime.ts'),
+			'@pounce/runtime': resolvePath(projectRootDir, 'src/lib/index.ts'),
+		},
+	},
 	plugins: [
 		{
 			name: 'babel-jsx-transform',
@@ -32,7 +43,14 @@ export default defineConfig({
 					plugins: [
 						babelPluginJsxReactive,
 						['@babel/plugin-proposal-decorators', { version: '2023-05' }],
-						['@babel/plugin-transform-react-jsx', { pragma: 'h', pragmaFrag: 'Fragment', throwIfNamespace: false }],
+						[
+							'@babel/plugin-transform-react-jsx',
+							{
+								runtime: 'automatic',
+								importSource: '@pounce/runtime',
+								throwIfNamespace: false,
+							},
+						],
 						['@babel/plugin-transform-typescript', { isTSX: true, allowDeclareFields: true }],
 					],
 					sourceMaps: true,

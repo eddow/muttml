@@ -1,3 +1,5 @@
+import { ScopedCallback } from 'mutts/src'
+import { Scope } from 'src/lib'
 import type { StyleInput } from '../lib/styles'
 
 declare global {
@@ -8,6 +10,20 @@ declare global {
 		// biome-ignore lint/suspicious/noConfusingVoidType: Void ends up automatically
 		type Child = Node | string | number | JSX.Element | void | false | null | undefined
 		type Children = Child | readonly Child[]
+
+		// Base interface for common HTML attributes
+		type BaseHTMLAttributes<N extends Node = HTMLElement> = JSX.IntrinsicThisAttributes<N> &
+			GlobalHTMLAttributes &
+			MouseReactiveHTMLAttributes & {
+				children?: Children
+				autoFocus?: boolean
+				// Additional common non-mouse events
+				onFocus?: (event: FocusEvent) => void
+				onBlur?: (event: FocusEvent) => void
+				onKeydown?: (event: KeyboardEvent) => void
+				onKeyup?: (event: KeyboardEvent) => void
+				onKeypress?: (event: KeyboardEvent) => void
+			}
 		// Specify the property name used for JSX children
 		interface ElementChildrenAttribute {
 			children: any
@@ -26,14 +42,33 @@ declare global {
 			template: any
 		}
 		type ElementType = string | ComponentFunction
+
+		type RenderOutput<T> = T extends JSX.Element ? ReturnType<T['render']> : T
+
+		type ElementResult<T> = RenderOutput<T> extends infer R
+			? R extends readonly Node[]
+				? readonly Node[]
+				: R extends Node
+					? R
+					: R extends null | undefined
+						? undefined
+						: Node | readonly Node[]
+			: Node | readonly Node[]
+
+		type ThisBinding<T> = ElementResult<T> | undefined
+
+		type ComponentIntrinsicAttributes<C> = C extends (...args: any[]) => any
+			? { this?: ThisBinding<ReturnType<C>> }
+			: {}
+
 		// Override the default JSX children handling
 		// Allow any children type so components can accept function-as-children
-		type IntrinsicAttributes<N extends Node> =
+		type IntrinsicThisAttributes<N extends Node | readonly Node[] | undefined> =
 			| { children: Children }
 			| ({
 					children?: any
 					// Meta: capture component reference on render
-					this?: N
+					this?: ThisBinding<N>
 					if?: any
 					use?: (target: N) => void
 					else?: true
@@ -45,6 +80,11 @@ declare global {
 			  } & {
 					[K in `when:${string}`]?: any
 			  })
+
+		type ElementIntrinsicAttributes<N extends Node | readonly Node[] | undefined> =
+			IntrinsicThisAttributes<N>
+
+		type IntrinsicAttributes = IntrinsicThisAttributes<Node | readonly Node[] | undefined>
 
 		// Custom class type for conditional classes
 		type ClassValue = string | ClassValue[] | Record<string, boolean> | null | undefined
@@ -163,20 +203,6 @@ declare global {
 			onDblclick?: (event: MouseEvent) => void
 		}
 
-		// Base interface for common HTML attributes
-		type BaseHTMLAttributes<N extends Node = HTMLElement> = IntrinsicAttributes<N> &
-			GlobalHTMLAttributes &
-			MouseReactiveHTMLAttributes & {
-				children?: Children
-				autoFocus?: boolean
-				// Additional common non-mouse events
-				onFocus?: (event: FocusEvent) => void
-				onBlur?: (event: FocusEvent) => void
-				onKeydown?: (event: KeyboardEvent) => void
-				onKeyup?: (event: KeyboardEvent) => void
-				onKeypress?: (event: KeyboardEvent) => void
-			}
-
 		interface InputNumber {
 			type: 'number' | 'range'
 			value?: number
@@ -221,20 +247,21 @@ declare global {
 
 		interface ForElementProps<T = any> {
 			each: readonly T[] | (() => readonly T[])
-			children: (item: T, oldItem?: JSX.Element) => JSX.Elem
+			children: (item: T, oldItem?: JSX.Element) => JSX.Element
 		}
+
 		interface IntrinsicElements extends HTMLTagElementsMap {
-			[elementName: string]: BaseHTMLAttributes<HTMLElement>
+			//[elementName: string]: BaseHTMLAttributes<HTMLElement>
 			dynamic: BaseHTMLAttributes<HTMLElement> & {
 				tag: HTMLElementTag | ComponentFunction
 				children?: Children
 				[key: string]: any
 			}
-			scope: IntrinsicAttributes<Node | Node[]> & {
+			scope: ElementIntrinsicAttributes<Node | Node[]> & {
 				children?: Children
 				[key: string]: any
 			}
-			for: IntrinsicAttributes<Node[]> & ForElementProps
+			for: ElementIntrinsicAttributes<Node[]> & ForElementProps
 			// Form Elements
 			input: BaseHTMLAttributes<HTMLInputElement> &
 				(InputNumber | InputString | InputBoolean) & {
@@ -598,10 +625,9 @@ declare global {
 			}
 
 			slot: BaseHTMLAttributes<HTMLSlotElement> & { name?: string }
-
-			// Common HTML attributes for all elements
-			[elemName: string]: BaseHTMLAttributes
 		}
 		type HTMLElementTag = keyof HTMLElementTagNameMap
 	}
 }
+
+export type { JSX }
