@@ -8,15 +8,15 @@ import {
 	isObject,
 	isString,
 	isSymbol,
-	mapped,
 	memoize,
 	organized,
+	project,
 	reactive,
 	reduced,
 	unwrap,
 } from 'mutts/src'
 import { namedEffect, testing } from './debug'
-import { ensureNameSpaced } from './namespaced'
+import { restructureProps } from './namespaced'
 import { ClassInput, classNames, StyleInput, styles } from './styles'
 import { extend, isElement, propsInto } from './utils'
 
@@ -130,10 +130,7 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 	const regularProps = propsBuckets.node
 	let mountObject: any
 	const resolvedTag = isString(tag) ? intrinsicComponentAliases[tag] : tag
-	const componentCtor =
-		!isString(tag) && typeof resolvedTag === 'function'
-			? ensureNameSpaced(resolvedTag)
-			: resolvedTag
+	const componentCtor = typeof resolvedTag === 'function' && resolvedTag
 	// If we were given a component function directly, render it
 	if (componentCtor) {
 		// Effect for styles - only updates style container
@@ -144,7 +141,7 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 				const givenProps = reactive(propsInto(regularProps, { children }))
 				// Set scope on the component instance
 				const childScope = extend(scope)
-				const rendered = componentCtor(givenProps, childScope)
+				const rendered = componentCtor(restructureProps(givenProps), childScope)
 				return processChildren([rendered], childScope)
 			},
 		}
@@ -312,11 +309,11 @@ const intrinsicComponentAliases = extend(null, {
 		const memoized = memoize(cb as (item: T & object) => JSX.Element)
 		const array = isNonReactive(props.each)
 			? props.each.map((item) => cb(item))
-			: mapped(props.each, (item, index, output: readonly JSX.Element[]) =>
-					isObject(item) || isSymbol(item) || isFunction(item)
+			: (project(props.each, ({ value: item, old }) => {
+					return isObject(item) || isSymbol(item) || isFunction(item)
 						? memoized(item as T & object)
-						: cb(item, output[index])
-				)
+						: cb(item, old as JSX.Element | undefined)
+				}) as readonly JSX.Element[])
 		return forward('for', array, scope)
 	},
 })
@@ -410,9 +407,10 @@ const render = memoize((renderer: JSX.Element, scope: Scope) => {
  * Returns a flat array of DOM nodes suitable for replaceChildren()
  */
 export function processChildren(children: readonly Child[], scope: Scope): readonly Node[] {
-	const renderers = mapped(children, (child) =>
-		isFunction(child) ? (child as () => Intermediates)() : child
-	)
+	const renderers = project(children, ({ get }) => {
+		const child = get()
+		return isFunction(child) ? (child as () => Intermediates)() : child
+	})
 	const conditioned = reduced(renderers, (child, previous: { had?: true }) => {
 		if (
 			isElement(child) &&
@@ -431,18 +429,20 @@ export function processChildren(children: readonly Child[], scope: Scope): reado
 		return [child]
 	})
 
-	const rendered = mapped(conditioned, (partial): Node | readonly Node[] | false | undefined => {
-		const nodes = isElement(partial) ? render(partial, scope) : partial
-		if (!nodes && !isNumber(nodes)) return
-		if (Array.isArray(nodes)) return processChildren(nodes, scope)
-		else if (nodes instanceof Node) return unwrap(nodes)
-		else if (isString(nodes) || isNumber(nodes)) {
-			const textNodeValue = String(nodes)
-			testing.renderingEvent?.('create text node', textNodeValue)
-			return document.createTextNode(textNodeValue)
+	const rendered = project(
+		conditioned,
+		({ value: partial }): Node | readonly Node[] | false | undefined => {
+			const nodes = isElement(partial) ? render(partial, scope) : partial
+			if (!nodes && !isNumber(nodes)) return
+			if (Array.isArray(nodes)) return processChildren(nodes, scope)
+			else if (nodes instanceof Node) return unwrap(nodes)
+			else if (isString(nodes) || isNumber(nodes)) {
+				const textNodeValue = String(nodes)
+				testing.renderingEvent?.('create text node', textNodeValue)
+				return document.createTextNode(textNodeValue)
+			}
 		}
-		return nodes
-	})
+	)
 	// Second loop: Flatten the temporary results into final Node[]
 	return reduced(
 		rendered,

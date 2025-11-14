@@ -1,7 +1,7 @@
 /**
  * Main entry point for Pounce-TS application
  */
-import { effect, isFunction, mapped, reactive, trackEffect } from 'mutts/src'
+import { effect, isFunction, project, reactive, trackEffect } from 'mutts/src'
 import { bindApp, compose, Scope } from './lib'
 
 function ResizeSandbox(_props: {}, scope: Scope) {
@@ -65,9 +65,9 @@ function MiniCounter(
 	return (
 		<>
 			<div>
-				{mapped(state.list, (value, index) => (
-					<button class="remove" onClick={() => state.list.splice(index, 1)}>
-						{value}
+				{project(state.list, ({ get, key }) => (
+					<button class="remove" onClick={() => state.list.splice(key, 1)}>
+						{get()}
 					</button>
 				))}
 			</div>

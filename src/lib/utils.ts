@@ -140,19 +140,22 @@ export function compose<
 ): A & B & C & D & E & F
 export function compose(...args: readonly ComposeArgument[]): Record<string, any>
 export function compose(...args: readonly ComposeArgument[]): Record<string, any> {
-	const result = reactive(Object.create(null))
+	let result = reactive(Object.create(null))
 	function addItem(item: ComposeArgument) {
 		let itemValues: Record<string, any>
 		if (isObject(item)) {
 			itemValues = reactive(item)
 		} else if (isFunction(item)) {
+			const from = result
+			result = reactive(Object.create(result))
 			const factory = /*memoize(item)*/ item as (from: Record<string, any>) => Record<string, any>
-			itemValues = reactive(factory(result))
+			itemValues = reactive(factory(from!))
 		} else throw new Error('Invalid compose argument')
-		for (const [key, value] of Object.entries(Object.getOwnPropertyDescriptors(itemValues))) {
-			if (value.get || value.set) Object.defineProperty(result, key, value)
-			else result[key] = itemValues[key]
-		}
+		if (itemValues)
+			for (const [key, value] of Object.entries(Object.getOwnPropertyDescriptors(itemValues))) {
+				if (value.get || value.set) Object.defineProperty(result, key, value)
+				else result![key] = itemValues[key]
+			}
 	}
 	for (const item of args) effect(() => addItem(item))
 	return result

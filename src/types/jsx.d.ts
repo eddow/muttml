@@ -260,12 +260,11 @@ declare global {
 		}
 
 		interface ForElementProps<T = any> {
-			each: readonly T[] | (() => readonly T[])
-			children: (item: T, oldItem?: JSX.Element) => JSX.Element
+			each: readonly T[]
+			children: (item: T, oldItem?: JSX.Element) => JSX.Element | null | undefined | false
 		}
 
 		interface IntrinsicElements extends HTMLTagElementsMap {
-			//[elementName: string]: BaseHTMLAttributes<HTMLElement>
 			dynamic: BaseHTMLAttributes<HTMLElement> & {
 				tag: HTMLElementTag | ComponentFunction
 				children?: Children
@@ -640,6 +639,10 @@ declare global {
 
 			slot: BaseHTMLAttributes<HTMLSlotElement> & { name?: string }
 		}
+		type HTMLAttributes<tag extends keyof HTMLElementTagNameMap> = Omit<
+			IntrinsicElements[tag],
+			'children'
+		>
 		type HTMLElementTag = keyof HTMLElementTagNameMap
 	}
 }

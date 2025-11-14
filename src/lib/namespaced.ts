@@ -49,7 +49,7 @@ export type NameSpacedComponent<Component extends (...args: any[]) => any> = Com
 		) => Return
 	: Component
 
-function restructureProps<Props extends Record<string, any> | undefined>(props: Props) {
+export function restructureProps<Props extends Record<string, any> | undefined>(props: Props) {
 	if (!props || typeof props !== 'object') return props
 	return organized(props, ({ key, get, set }, target) => {
 		if (typeof key !== 'string') return organize(target, key, { get, set })
