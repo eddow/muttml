@@ -1,4 +1,4 @@
-import { effect, isFunction, isObject, memoize, reactive } from 'mutts/src'
+import { effect, isFunction, isObject, memoize, reactive, touched1 } from 'mutts/src'
 
 type AllOptional<T> = {
 	[K in keyof T as undefined extends T[K] ? K : never]-?: T[K]
@@ -153,8 +153,8 @@ export function compose(...args: readonly ComposeArgument[]): Record<string, any
 		} else throw new Error('Invalid compose argument')
 		if (itemValues)
 			for (const [key, value] of Object.entries(Object.getOwnPropertyDescriptors(itemValues))) {
-				if (value.get || value.set) Object.defineProperty(result, key, value)
-				else result![key] = itemValues[key]
+				Object.defineProperty(result, key, value)
+				touched1(result, { type: 'set', prop: key }, key)
 			}
 	}
 	for (const item of args) effect(() => addItem(item))

@@ -137,12 +137,14 @@ export const h = (tag: any, props: Record<string, any> = {}, ...children: Child[
 		mountObject = {
 			tag,
 			render(scope: Scope = rootScope) {
-				testing.renderingEvent?.('render component', componentCtor.name)
-				const givenProps = reactive(propsInto(regularProps, { children }))
 				// Set scope on the component instance
 				const childScope = extend(scope)
-				const rendered = componentCtor(restructureProps(givenProps), childScope)
-				return processChildren([rendered], childScope)
+				const rendered = project.array([null], () => {
+					testing.renderingEvent?.('render component', componentCtor.name)
+					const givenProps = reactive(propsInto(regularProps, { children }))
+					return componentCtor(restructureProps(givenProps), childScope)
+				})
+				return processChildren(rendered, childScope)
 			},
 		}
 	} else {
